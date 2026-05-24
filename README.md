@@ -10,6 +10,7 @@ ChartQuery is a visual learning app for everyday curiosity. Ask a plain-English 
 - Richer daily story headlines, plain-language context, and "why this matters" explanations
 - Clarification options for vague queries
 - Multi-series charts with legends, tooltips, and stat cards
+- Clickable chart points with "what happened here?" explanations and local notes
 - Compare-with flow for layering a second idea onto the current chart
 - Keyless live routes for U.S. Treasury public debt and CoinGecko crypto prices
 - Shareable query URLs with copy-link support

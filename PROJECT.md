@@ -25,6 +25,7 @@ Included:
 - Chart generation endpoint
 - Keyless live data routes for Treasury public debt and CoinGecko crypto prices
 - Shareable query URLs and source-trust details
+- Clickable point explanations and local chart notes
 - Editorial UI and chart rendering
 
 Deferred:

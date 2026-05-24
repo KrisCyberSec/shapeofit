@@ -14,6 +14,11 @@ export interface ChartAnnotation {
   createdAt: string;
 }
 
+export interface ChartPointSelection {
+  xValue: string | number;
+  row: Record<string, string | number>;
+}
+
 export interface ChartSpec {
   title: string;
   subtitle: string;

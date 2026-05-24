@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -15,7 +16,7 @@ import {
   XAxis,
   YAxis
 } from "recharts";
-import type { ChartSpec, ChartType } from "@/types/chart";
+import type { ChartPointSelection, ChartSpec, ChartType } from "@/types/chart";
 import { compactNumber, labelize } from "@/lib/chart-utils";
 
 type TooltipPayload = {
@@ -25,16 +26,35 @@ type TooltipPayload = {
   dataKey?: string;
 };
 
+type ChartClickState = {
+  activeLabel?: string | number;
+  activePayload?: Array<{
+    payload?: Record<string, string | number>;
+  }>;
+};
+
 export function ChartRenderer({
   spec,
-  chartType
+  chartType,
+  selectedXValue,
+  onPointSelect
 }: {
   spec: ChartSpec;
   chartType: ChartType;
+  selectedXValue?: string | number | null;
+  onPointSelect?: (selection: ChartPointSelection) => void;
 }) {
+  function handleChartClick(state: ChartClickState | null) {
+    const row = state?.activePayload?.[0]?.payload;
+    const xValue = row?.[spec.xKey] ?? state?.activeLabel;
+    if (!row || typeof xValue === "undefined") return;
+    onPointSelect?.({ xValue, row });
+  }
+
   const common = {
     data: spec.data,
-    margin: { top: 18, right: 12, bottom: 8, left: 0 }
+    margin: { top: 18, right: 12, bottom: 8, left: 0 },
+    onClick: handleChartClick
   };
 
   const axes = (
@@ -54,11 +74,19 @@ export function ChartRenderer({
         width={54}
       />
       <Tooltip content={<ChartTooltip spec={spec} />} />
+      {typeof selectedXValue !== "undefined" && selectedXValue !== null ? (
+        <ReferenceLine
+          x={selectedXValue}
+          stroke="#c0392b"
+          strokeDasharray="4 3"
+          ifOverflow="extendDomain"
+        />
+      ) : null}
     </>
   );
 
   return (
-    <div className="h-[280px] w-full md:h-[380px]">
+    <div className="h-[280px] w-full cursor-crosshair md:h-[380px]">
       <ResponsiveContainer width="100%" height="100%">
         {chartType === "bar" ? (
           <BarChart {...common}>

@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, GitCompareArrows, Lightbulb, Sparkles } from "lucide-react";
-import type { ChartSpec, ChartType, ClarificationResponse, DailyStory } from "@/types/chart";
+import type {
+  ChartAnnotation,
+  ChartPointSelection,
+  ChartSpec,
+  ChartType,
+  ClarificationResponse,
+  DailyStory
+} from "@/types/chart";
+import { chartStorageKey } from "@/lib/annotations";
+import { AnnotationPanel } from "@/components/AnnotationPanel";
 import { ChartHeader } from "@/components/ChartHeader";
 import { ChartRenderer } from "@/components/ChartRenderer";
 import { MultiSeriesLegend } from "@/components/MultiSeriesLegend";
@@ -80,6 +89,8 @@ export default function Home() {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "ready">("idle");
   const [manualShareUrl, setManualShareUrl] = useState("");
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [selectedPoint, setSelectedPoint] = useState<ChartPointSelection | null>(null);
+  const [annotations, setAnnotations] = useState<ChartAnnotation[]>([]);
 
   useEffect(() => {
     const initialQuery = new URL(window.location.href).searchParams.get("q")?.trim() ?? "";
@@ -134,6 +145,31 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!spec) {
+      queueMicrotask(() => {
+        setSelectedPoint(null);
+        setAnnotations([]);
+      });
+      return;
+    }
+
+    const saved = window.localStorage.getItem(chartStorageKey(spec));
+    let parsed: ChartAnnotation[] = [];
+    if (saved) {
+      try {
+        parsed = JSON.parse(saved) as ChartAnnotation[];
+      } catch {
+        window.localStorage.removeItem(chartStorageKey(spec));
+      }
+    }
+
+    queueMicrotask(() => {
+      setSelectedPoint(null);
+      setAnnotations(parsed);
+    });
+  }, [spec]);
+
   const categoryPrompts = useMemo(
     () =>
       CATEGORIES.map((category) => ({
@@ -179,6 +215,7 @@ export default function Home() {
       const nextSpec = { ...payload.spec, generatedFrom: cleanQuery };
       setSpec(nextSpec);
       setChartType(nextSpec.chartType);
+      setSelectedPoint(null);
       if (!compareWith) {
         setCurrentQuery(cleanQuery);
         if (options.syncUrl !== false) syncChartUrl(cleanQuery);
@@ -216,6 +253,21 @@ export default function Home() {
       setCopyStatus("ready");
       setManualShareUrl(shareUrl);
     }
+  }
+
+  function addAnnotation(note: string) {
+    if (!spec || !selectedPoint) return;
+
+    const nextAnnotation: ChartAnnotation = {
+      xValue: selectedPoint.xValue,
+      note,
+      createdAt: new Date().toISOString()
+    };
+    setAnnotations((current) => {
+      const next = [nextAnnotation, ...current].slice(0, 12);
+      window.localStorage.setItem(chartStorageKey(spec), JSON.stringify(next));
+      return next;
+    });
   }
 
   return (
@@ -309,6 +361,7 @@ export default function Home() {
                       onClick={() => {
                         setSpec(item);
                         setChartType(item.chartType);
+                        setSelectedPoint(null);
                         if (item.generatedFrom) {
                           setCurrentQuery(item.generatedFrom);
                           syncChartUrl(item.generatedFrom);
@@ -381,7 +434,12 @@ export default function Home() {
                   <MultiSeriesLegend spec={spec} />
                 </div>
                 <div className="mt-5">
-                  <ChartRenderer spec={spec} chartType={chartType} />
+                  <ChartRenderer
+                    spec={spec}
+                    chartType={chartType}
+                    selectedXValue={selectedPoint?.xValue}
+                    onPointSelect={setSelectedPoint}
+                  />
                 </div>
                 <div className="mt-6 border-t border-rule pt-5">
                   <p className="font-mono text-xs uppercase tracking-[0.16em] text-accent">
@@ -449,6 +507,12 @@ export default function Home() {
                 </div>
 
                 <StatCards spec={spec} />
+                <AnnotationPanel
+                  spec={spec}
+                  selection={selectedPoint}
+                  annotations={annotations}
+                  onAddNote={addAnnotation}
+                />
               </aside>
             </div>
           ) : (
