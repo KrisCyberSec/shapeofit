@@ -58,6 +58,15 @@ export async function getCryptoPriceSpec(coins: Coin[] = [COINS[0]], days = 30):
     colors,
     unit: multiSeries ? "index" : "$",
     source: "Live CoinGecko market chart API, refreshed by the app route.",
+    sourceUrl: "https://docs.coingecko.com/reference/coins-id-market-chart",
+    sourceUpdatedAt: new Date().toISOString().slice(0, 10),
+    assumptions: [
+      multiSeries
+        ? "Multiple coins are indexed to the first shared point so movement can be compared."
+        : "Prices are shown in USD using CoinGecko's market chart endpoint.",
+      "The app samples long windows to keep the chart readable.",
+      "Crypto prices can move quickly between refreshes."
+    ],
     insight: cryptoInsight(series, multiSeries),
     whyItMatters:
       "Live crypto charts prove the app can move beyond canned examples while still labeling the source and uncertainty clearly.",
@@ -108,6 +117,13 @@ export async function getTreasuryDebtSpec(limit = 30): Promise<ChartSpec> {
     colors: [colors[2]],
     unit: "trillion USD",
     source: "Live U.S. Treasury Fiscal Data API: Debt to the Penny.",
+    sourceUrl: "https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/",
+    sourceUpdatedAt: latestDate(rows),
+    assumptions: [
+      "Values are converted from dollars to trillions of dollars.",
+      "The latest rows are sorted by Treasury record date.",
+      "Weekends and federal holidays may not have a new record."
+    ],
     insight: `Across this window, the reported total public debt changed by about ${formatTrillions(change)}.`,
     whyItMatters:
       "A live Treasury route gives the money category a verifiable source, which helps users distinguish official data from rough educational estimates.",
@@ -239,6 +255,12 @@ function formatTrillions(value: number) {
     minimumFractionDigits: 2
   });
   return `${value >= 0 ? "+" : "-"}$${formatted} trillion`;
+}
+
+function latestDate(rows: Array<{ date: string; debt: number }>) {
+  const currentYear = new Date().getFullYear();
+  const date = rows.at(-1)?.date;
+  return date ? `${currentYear}-${date}` : undefined;
 }
 
 function toIsoDay(timestamp: number) {

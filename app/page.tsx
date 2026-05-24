@@ -7,6 +7,7 @@ import { ChartHeader } from "@/components/ChartHeader";
 import { ChartRenderer } from "@/components/ChartRenderer";
 import { MultiSeriesLegend } from "@/components/MultiSeriesLegend";
 import { QueryBar, type PromptSuggestion } from "@/components/QueryBar";
+import { SourceDetailsDrawer } from "@/components/SourceDetailsDrawer";
 import { StatCards } from "@/components/StatCards";
 
 const PROMPTS: PromptSuggestion[] = [
@@ -75,8 +76,13 @@ export default function Home() {
   const [clarification, setClarification] = useState<ClarificationResponse | null>(null);
   const [history, setHistory] = useState<ChartSpec[]>([]);
   const [compareValue, setCompareValue] = useState("");
+  const [currentQuery, setCurrentQuery] = useState("");
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "ready">("idle");
+  const [manualShareUrl, setManualShareUrl] = useState("");
+  const [sourceOpen, setSourceOpen] = useState(false);
 
   useEffect(() => {
+    const initialQuery = new URL(window.location.href).searchParams.get("q")?.trim() ?? "";
     const saved = window.localStorage.getItem("chartquery-history");
     if (saved) {
       try {
@@ -91,10 +97,41 @@ export default function Home() {
       .then((response) => response.json() as Promise<DailyStory>)
       .then((story) => {
         setDaily(story);
-        setSpec(story.spec);
-        setChartType(story.spec.chartType);
+        if (!initialQuery) {
+          const storySpec = { ...story.spec, generatedFrom: story.query };
+          setSpec(storySpec);
+          setChartType(storySpec.chartType);
+          setCurrentQuery(story.query);
+        }
       })
       .catch(() => setError("The daily story could not be loaded."));
+
+    if (initialQuery) {
+      fetch("/api/chart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: initialQuery })
+      })
+        .then((response) => response.json() as Promise<ApiChartResponse | ApiErrorResponse>)
+        .then((payload) => {
+          if ("needsClarification" in payload) {
+            setClarification(payload);
+            return;
+          }
+
+          if (!("spec" in payload)) {
+            throw new Error("The chart response was missing chart data.");
+          }
+
+          const nextSpec = { ...payload.spec, generatedFrom: initialQuery };
+          setSpec(nextSpec);
+          setChartType(nextSpec.chartType);
+          setCurrentQuery(initialQuery);
+        })
+        .catch((caught) => {
+          setError(caught instanceof Error ? caught.message : "The shared chart could not be loaded.");
+        });
+    }
   }, []);
 
   const categoryPrompts = useMemo(
@@ -106,16 +143,23 @@ export default function Home() {
     []
   );
 
-  async function runQuery(query: string, compareWith?: ChartSpec) {
+  async function runQuery(
+    query: string,
+    compareWith?: ChartSpec,
+    options: { syncUrl?: boolean } = {}
+  ) {
+    const cleanQuery = query.trim();
     setLoading(true);
     setError(null);
     setClarification(null);
+    setCopyStatus("idle");
+    setManualShareUrl("");
 
     try {
       const response = await fetch("/api/chart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, compareWith })
+        body: JSON.stringify({ query: cleanQuery, compareWith })
       });
       const payload = (await response.json()) as ApiChartResponse | ApiErrorResponse;
 
@@ -132,10 +176,15 @@ export default function Home() {
         throw new Error("The chart response was missing chart data.");
       }
 
-      setSpec(payload.spec);
-      setChartType(payload.spec.chartType);
+      const nextSpec = { ...payload.spec, generatedFrom: cleanQuery };
+      setSpec(nextSpec);
+      setChartType(nextSpec.chartType);
+      if (!compareWith) {
+        setCurrentQuery(cleanQuery);
+        if (options.syncUrl !== false) syncChartUrl(cleanQuery);
+      }
       setHistory((current) => {
-        const next = dedupeHistory([payload.spec, ...current]).slice(0, 6);
+        const next = dedupeHistory([nextSpec, ...current]).slice(0, 6);
         window.localStorage.setItem("chartquery-history", JSON.stringify(next));
         return next;
       });
@@ -151,6 +200,22 @@ export default function Home() {
     if (!query || !spec) return;
     setCompareValue("");
     void runQuery(query, spec);
+  }
+
+  async function handleCopyLink() {
+    const query = currentQuery || spec?.generatedFrom;
+    if (!query) return;
+    const shareUrl = chartUrlForQuery(query);
+
+    try {
+      await copyTextToClipboard(shareUrl);
+      setCopyStatus("copied");
+      setManualShareUrl("");
+      window.setTimeout(() => setCopyStatus("idle"), 1600);
+    } catch {
+      setCopyStatus("ready");
+      setManualShareUrl(shareUrl);
+    }
   }
 
   return (
@@ -244,6 +309,10 @@ export default function Home() {
                       onClick={() => {
                         setSpec(item);
                         setChartType(item.chartType);
+                        if (item.generatedFrom) {
+                          setCurrentQuery(item.generatedFrom);
+                          syncChartUrl(item.generatedFrom);
+                        }
                       }}
                       type="button"
                     >
@@ -287,7 +356,27 @@ export default function Home() {
           {spec ? (
             <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
               <section className="border border-rule bg-paper p-4 md:p-6">
-                <ChartHeader spec={spec} chartType={chartType} onChartTypeChange={setChartType} />
+                <ChartHeader
+                  spec={spec}
+                  chartType={chartType}
+                  copyStatus={copyStatus}
+                  onCopyLink={handleCopyLink}
+                  onOpenSource={() => setSourceOpen(true)}
+                  onChartTypeChange={setChartType}
+                />
+                {manualShareUrl ? (
+                  <div className="mt-4 border border-rule bg-rule2 p-3">
+                    <p className="font-mono text-xs uppercase tracking-[0.16em] text-ink3">
+                      Chart Link
+                    </p>
+                    <input
+                      className="mt-2 w-full border border-rule bg-paper px-3 py-2 font-mono text-xs text-ink outline-none"
+                      readOnly
+                      value={manualShareUrl}
+                      onFocus={(event) => event.currentTarget.select()}
+                    />
+                  </div>
+                ) : null}
                 <div className="mt-5">
                   <MultiSeriesLegend spec={spec} />
                 </div>
@@ -397,6 +486,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {sourceOpen && spec ? (
+        <SourceDetailsDrawer spec={spec} onClose={() => setSourceOpen(false)} />
+      ) : null}
     </main>
   );
 }
@@ -409,4 +502,44 @@ function dedupeHistory(items: ChartSpec[]) {
     seen.add(key);
     return true;
   });
+}
+
+function chartUrlForQuery(query: string) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("q", query);
+  return url.toString();
+}
+
+function syncChartUrl(query: string) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("q", query);
+  window.history.pushState(null, "", `${url.pathname}${url.search}`);
+}
+
+async function copyTextToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Some embedded browsers expose the API but do not permit writes.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    if (!document.execCommand("copy")) {
+      throw new Error("Copy command failed");
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }

@@ -1,3 +1,4 @@
+import { Copy, Info } from "lucide-react";
 import type { ChartSpec, ChartType } from "@/types/chart";
 import { DataFreshnessTag } from "./DataFreshnessTag";
 
@@ -6,10 +7,16 @@ const CHART_TYPES: ChartType[] = ["line", "bar", "area", "scatter"];
 export function ChartHeader({
   spec,
   chartType,
+  copyStatus,
+  onCopyLink,
+  onOpenSource,
   onChartTypeChange
 }: {
   spec: ChartSpec;
   chartType: ChartType;
+  copyStatus?: "idle" | "copied" | "ready";
+  onCopyLink?: () => void;
+  onOpenSource?: () => void;
   onChartTypeChange: (type: ChartType) => void;
 }) {
   return (
@@ -23,6 +30,26 @@ export function ChartHeader({
 
       <div className="flex flex-col items-start gap-3 lg:items-end">
         <DataFreshnessTag source={spec.dataSource} />
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <button
+            type="button"
+            className="inline-flex h-9 items-center gap-2 border border-rule px-3 font-mono text-[11px] uppercase text-ink2 hover:border-ink hover:text-ink"
+            onClick={onOpenSource}
+            title="Show source details"
+          >
+            <Info size={14} />
+            Source
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-9 items-center gap-2 border border-rule px-3 font-mono text-[11px] uppercase text-ink2 hover:border-ink hover:text-ink"
+            onClick={onCopyLink}
+            title="Copy chart link"
+          >
+            <Copy size={14} />
+            {copyStatus === "copied" ? "Copied" : copyStatus === "ready" ? "Link Ready" : "Share"}
+          </button>
+        </div>
         <div className="grid grid-cols-4 border border-rule bg-paper">
           {CHART_TYPES.map((type) => (
             <button

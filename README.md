@@ -12,6 +12,8 @@ ChartQuery is a visual learning app for everyday curiosity. Ask a plain-English 
 - Multi-series charts with legends, tooltips, and stat cards
 - Compare-with flow for layering a second idea onto the current chart
 - Keyless live routes for U.S. Treasury public debt and CoinGecko crypto prices
+- Shareable query URLs with copy-link support
+- Source details drawer with freshness, assumptions, and source links when available
 - Data freshness badges for approximate, historical estimate, uploaded, and live-ready sources
 - Anthropic Claude support when `ANTHROPIC_API_KEY` is configured
 - Deterministic local mock fallback when no API key is configured

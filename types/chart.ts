@@ -17,6 +17,7 @@ export interface ChartAnnotation {
 export interface ChartSpec {
   title: string;
   subtitle: string;
+  generatedFrom?: string;
   chartType: ChartType;
   data: Record<string, string | number>[];
   xKey: string;
@@ -24,6 +25,9 @@ export interface ChartSpec {
   colors: string[];
   unit: string;
   source: string;
+  sourceUrl?: string;
+  sourceUpdatedAt?: string;
+  assumptions?: string[];
   insight: string;
   whyItMatters?: string;
   dataSource: DataSource;

@@ -44,6 +44,7 @@ export function normalizeSpec(spec: ChartSpec): ChartSpec {
     data: spec.data.filter((row) => row && typeof row === "object"),
     yKeys,
     colors: yKeys.map((_, index) => spec.colors[index] ?? DEFAULT_COLORS[index]),
+    assumptions: spec.assumptions?.slice(0, 4),
     seriesLabels: yKeys.map((key, index) => spec.seriesLabels?.[index] ?? labelize(key)),
     followUpPrompts: spec.followUpPrompts?.slice(0, 4)
   };
