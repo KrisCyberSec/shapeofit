@@ -1,0 +1,72 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f5f2ec;
+  --paper: #faf8f4;
+  --ink: #1a1814;
+  --ink2: #4a4640;
+  --ink3: #8a8580;
+  --rule: #ddd9d0;
+  --rule2: #ece8e0;
+  --accent: #c0392b;
+  --accent2: #e74c3c;
+  --teal: #16a085;
+  --navy: #2c3e50;
+  --gold: #d4ac0d;
+  --c1: #c0392b;
+  --c2: #2980b9;
+  --c3: #16a085;
+  --c4: #8e44ad;
+  --c5: #d4ac0d;
+  --c6: #e67e22;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(rgba(26, 24, 20, 0.025) 1px, transparent 1px),
+    var(--bg);
+  background-size: 100% 28px;
+  color: var(--ink);
+  font-family: "Outfit", Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.double-rule {
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
