@@ -23,6 +23,15 @@ Included:
 - Typed chart schema
 - Daily story endpoint
 - Chart generation endpoint
+- Keyless live data routes for Treasury public debt and CoinGecko crypto prices
+- Keyless FRED macro route for inflation, rates, jobs, gas prices, wages, and home prices
+- Keyless World Bank route for population, urbanization, life expectancy, and country rankings
+- Shareable query URLs and source-trust details
+- Clickable point explanations and local chart notes
+- Shareable chart-note URLs
+- PNG chart image export and social preview metadata
+- Comparison presets for high-value starter questions
+- Query intent routing for common everyday phrasing
 - Editorial UI and chart rendering
 
 Deferred:
@@ -30,7 +39,4 @@ Deferred:
 - Accounts
 - Payments
 - Database persistence
-- Share links
-- Screenshot API
 - CSV upload
-- Live FRED/CoinGecko/World Bank feeds

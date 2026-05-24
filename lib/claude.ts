@@ -16,7 +16,12 @@ Shape:
   "colors": ["#c0392b"],
   "unit": "%, $, index, people, titles, etc.",
   "source": "source or confidence note",
+  "sourceUrl": "optional official or useful source URL",
+  "sourceUpdatedAt": "optional YYYY-MM-DD freshness date",
+  "assumptions": ["optional plain-language caveat"],
   "insight": "one plain-language takeaway",
+  "whyItMatters": "one sentence explaining why a normal person should care",
+  "followUpPrompts": ["short related question"],
   "dataSource": "training" | "approximate"
 }
 
@@ -24,6 +29,7 @@ Rules:
 - Make the chart understandable to a normal person.
 - Be honest. Use "approximate" when uncertain.
 - Use 5-16 data points.
+- Include 2-4 follow-up prompts when useful.
 - Up to 3 series.
 - Raw numeric values only in y fields.
 - Prefer colors #c0392b, #2980b9, #16a085.

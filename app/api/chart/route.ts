@@ -3,7 +3,9 @@ import type { ChartSpec } from "@/types/chart";
 import { generateChartWithClaude } from "@/lib/claude";
 import { getClarification } from "@/lib/clarify";
 import { mergeComparison, normalizeSpec } from "@/lib/chart-utils";
+import { liveSpecForQuery } from "@/lib/live-data";
 import { mockChartForQuery } from "@/lib/mock-data";
+import { routeQueryIntent } from "@/lib/query-router";
 
 export const dynamic = "force-dynamic";
 
@@ -19,16 +21,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const query = body.query?.trim();
-  if (!query) {
+  const rawQuery = body.query?.trim();
+  if (!rawQuery) {
     return NextResponse.json(
       { error: "empty_query", message: "Type something you want to see visualized." },
       { status: 400 }
     );
   }
+  const query = routeQueryIntent(rawQuery);
 
   if (!body.compareWith) {
-    const clarification = getClarification(query);
+    const clarification = getClarification(rawQuery);
     if (clarification) return NextResponse.json(clarification);
   }
 
@@ -45,6 +48,13 @@ export async function POST(req: NextRequest) {
 }
 
 async function generateSpec(query: string): Promise<{ spec: ChartSpec; mocked: boolean }> {
+  try {
+    const liveSpec = await liveSpecForQuery(query);
+    if (liveSpec) return { spec: liveSpec, mocked: false };
+  } catch {
+    // Fall through to AI or deterministic mock data so the interaction stays responsive.
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return { spec: mockChartForQuery(query), mocked: true };
   }
