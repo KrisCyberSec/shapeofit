@@ -40,3 +40,7 @@ Deferred:
 - Payments
 - Database persistence
 - CSV upload
+
+## Stack Direction
+
+Use Vercel as the primary Next.js host and Cloudflare as the DNS/security edge when this moves from MVP to production. Keep new work portable by default: standard Next.js route handlers, platform-neutral environment variables, and no Netlify-specific product services. The current Netlify deployment is temporary until the Vercel/Cloudflare cutover is complete.

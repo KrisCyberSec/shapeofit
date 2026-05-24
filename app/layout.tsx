@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://chartquery.netlify.app";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://chartquery.netlify.app"),
+  metadataBase: new URL(siteUrl),
   title: "ChartQuery",
   description: "Ask plain-language data questions and get trustworthy visual explanations.",
   openGraph: {

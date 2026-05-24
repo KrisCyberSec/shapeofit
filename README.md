@@ -43,10 +43,13 @@ npm run dev -- -p 3010 -H 127.0.0.1
 Copy `.env.example` to `.env.local` and add keys as needed.
 
 ```env
+NEXT_PUBLIC_SITE_URL=https://chartquery.netlify.app
 ANTHROPIC_API_KEY=
 ```
 
 Without `ANTHROPIC_API_KEY`, the app still runs using local mock chart data.
+
+`NEXT_PUBLIC_SITE_URL` controls canonical/social metadata. Use the production Vercel/custom-domain URL after the Vercel cutover.
 
 ## Live Data Routes
 
@@ -64,6 +67,10 @@ npm run lint
 npm run typecheck
 npm run build
 ```
+
+## Deployment Direction
+
+The long-term production stack should be Vercel for Next.js hosting with Cloudflare in front for DNS, WAF, rate limiting, bot controls, and Turnstile. Netlify is only the temporary MVP host. See [docs/STACK.md](docs/STACK.md).
 
 ## Product Direction
 
