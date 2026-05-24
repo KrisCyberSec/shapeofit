@@ -20,6 +20,60 @@ export function explainPoint(spec: ChartSpec, selection: ChartPointSelection) {
     };
   }
 
+  if (spec.dataSource === "live_fred" && lowerTitle.includes("inflation")) {
+    return {
+      title: "Inflation pressure point",
+      body: movement
+        ? `${movement} Inflation points are best read against the prior year because this chart uses year-over-year CPI change.`
+        : "This point is year-over-year CPI inflation, so it measures how much prices changed from the same month a year earlier."
+    };
+  }
+
+  if (spec.dataSource === "live_fred" && lowerTitle.includes("mortgage")) {
+    return {
+      title: "Borrowing cost checkpoint",
+      body: movement
+        ? `${movement} Mortgage-rate moves matter because they change monthly payments even when the home price stays the same.`
+        : "This point shows the national 30-year fixed mortgage-rate average, a practical proxy for homebuyer borrowing costs."
+    };
+  }
+
+  if (spec.dataSource === "live_fred" && lowerTitle.includes("unemployment")) {
+    return {
+      title: "Labor-market stress point",
+      body: movement
+        ? `${movement} Unemployment points help reveal whether labor-market pressure is building or easing.`
+        : "This point shows the seasonally adjusted unemployment rate, one of the simplest gauges of labor-market stress."
+    };
+  }
+
+  if (spec.dataSource === "live_fred" && lowerTitle.includes("fed funds")) {
+    return {
+      title: "Policy-rate checkpoint",
+      body: movement
+        ? `${movement} This matters because Fed policy changes often ripple into mortgages, credit cards, savings rates, and business borrowing.`
+        : "This point shows the effective federal funds rate, a core signal for monetary-policy pressure."
+    };
+  }
+
+  if (spec.dataSource === "live_fred" && lowerTitle.includes("gas")) {
+    return {
+      title: "Visible price pressure",
+      body: movement
+        ? `${movement} Gas prices are especially noticeable because many people see them posted publicly every week.`
+        : "This point shows the national regular gasoline price average, which can move quickly with oil markets and seasonal demand."
+    };
+  }
+
+  if (spec.dataSource === "live_fred" && lowerTitle.includes("earnings")) {
+    return {
+      title: "Paycheck checkpoint",
+      body: movement
+        ? `${movement} Wage points matter most when compared with inflation and living costs.`
+        : "This point shows average hourly earnings, a useful but broad read on paycheck growth."
+    };
+  }
+
   if (lowerTitle.includes("remote work") && xValue === "2020") {
     return {
       title: "A sudden work reset",

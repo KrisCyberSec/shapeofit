@@ -1,4 +1,5 @@
 import type { ChartSpec } from "@/types/chart";
+import { macroSpecForQuery } from "./macro-data";
 import { normalizeSpec } from "./chart-utils";
 
 const colors = ["#c0392b", "#2980b9", "#16a085"];
@@ -29,6 +30,9 @@ export async function liveSpecForQuery(query: string): Promise<ChartSpec | null>
   if (isTreasuryDebtQuery(lower)) {
     return getTreasuryDebtSpec();
   }
+
+  const macroSpec = await macroSpecForQuery(query);
+  if (macroSpec) return macroSpec;
 
   if (isCryptoQuery(lower)) {
     const coins = coinsForQuery(lower);

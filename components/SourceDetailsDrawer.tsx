@@ -13,7 +13,7 @@ const SOURCE_LABELS: Record<DataSource, string> = {
 const SOURCE_EXPLANATIONS: Record<DataSource, string> = {
   live_treasury:
     "Fetched from the U.S. Treasury Fiscal Data API when the chart is requested.",
-  live_fred: "Fetched from a live Federal Reserve Economic Data source when configured.",
+  live_fred: "Fetched from the public FRED graph data endpoint when the chart is requested.",
   live_coingecko: "Fetched from CoinGecko market data when the chart is requested.",
   csv_upload: "Built from a user-provided file.",
   training: "Based on stable historical summaries, not refreshed live.",

@@ -22,7 +22,12 @@ import { StatCards } from "@/components/StatCards";
 const PROMPTS: PromptSuggestion[] = [
   { category: "Money", prompt: "rent vs wages since 2000" },
   { category: "Money", prompt: "US national debt live last 30 days" },
-  { category: "Money", prompt: "US inflation rate 2015 to 2024" },
+  { category: "Money", prompt: "US inflation rate since 2020" },
+  { category: "Money", prompt: "mortgage rates since 2020" },
+  { category: "Money", prompt: "unemployment rate since 2020" },
+  { category: "Money", prompt: "fed funds rate since 2015" },
+  { category: "Money", prompt: "gas prices since 2020" },
+  { category: "Money", prompt: "wages since 2020" },
   { category: "Money", prompt: "mortgage rates versus home prices since 2000" },
   { category: "Relationships", prompt: "marriage rates in the United States since 1970" },
   { category: "Relationships", prompt: "average age at first marriage since 1970" },
@@ -53,7 +58,7 @@ const PROMPTS: PromptSuggestion[] = [
   { category: "Technology", prompt: "internet access in the United States since 2000" },
   { category: "Technology", prompt: "social media adoption since 2005" },
   { category: "Food", prompt: "coffee prices over the last decade" },
-  { category: "Food", prompt: "US food price inflation 2010 to 2024" },
+  { category: "Food", prompt: "US food price inflation since 2020" },
   { category: "Food", prompt: "gas prices over the last decade" }
 ];
 
