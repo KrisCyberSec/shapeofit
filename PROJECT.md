@@ -23,6 +23,7 @@ Included:
 - Typed chart schema
 - Daily story endpoint
 - Chart generation endpoint
+- Keyless live data routes for Treasury public debt and CoinGecko crypto prices
 - Editorial UI and chart rendering
 
 Deferred:
@@ -33,4 +34,4 @@ Deferred:
 - Share links
 - Screenshot API
 - CSV upload
-- Live FRED/CoinGecko/World Bank feeds
+- Live FRED/World Bank feeds

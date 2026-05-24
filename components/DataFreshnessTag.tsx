@@ -4,6 +4,7 @@ const BADGE_CONFIG: Record<
   DataSource,
   { label: string; color: string; dot: boolean }
 > = {
+  live_treasury: { label: "LIVE - TREASURY", color: "#16a085", dot: true },
   live_fred: { label: "LIVE - FRED", color: "#16a085", dot: true },
   live_coingecko: { label: "LIVE - COINGECKO", color: "#16a085", dot: true },
   csv_upload: { label: "UPLOADED DATA", color: "#2980b9", dot: false },

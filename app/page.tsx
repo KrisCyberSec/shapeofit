@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, GitCompareArrows, Sparkles } from "lucide-react";
+import { ArrowUpRight, GitCompareArrows, Lightbulb, Sparkles } from "lucide-react";
 import type { ChartSpec, ChartType, ClarificationResponse, DailyStory } from "@/types/chart";
 import { ChartHeader } from "@/components/ChartHeader";
 import { ChartRenderer } from "@/components/ChartRenderer";
@@ -11,20 +11,55 @@ import { StatCards } from "@/components/StatCards";
 
 const PROMPTS: PromptSuggestion[] = [
   { category: "Money", prompt: "rent vs wages since 2000" },
+  { category: "Money", prompt: "US national debt live last 30 days" },
   { category: "Money", prompt: "US inflation rate 2015 to 2024" },
+  { category: "Money", prompt: "mortgage rates versus home prices since 2000" },
   { category: "Relationships", prompt: "marriage rates in the United States since 1970" },
+  { category: "Relationships", prompt: "average age at first marriage since 1970" },
+  { category: "Relationships", prompt: "birth rates in the United States since 1970" },
   { category: "Population", prompt: "world population growth 1960 to 2024" },
+  { category: "Population", prompt: "largest countries by population today" },
+  { category: "Population", prompt: "urban population share since 1960" },
   { category: "Sports", prompt: "Lakers vs Celtics championships" },
+  { category: "Sports", prompt: "NBA teams with the most championships" },
+  { category: "Sports", prompt: "Warriors championships by decade" },
+  { category: "Crypto", prompt: "Bitcoin vs Ethereum live over the last 30 days" },
+  { category: "Crypto", prompt: "Bitcoin price over the last year" },
+  { category: "Crypto", prompt: "Solana price over the last 30 days" },
   { category: "Crypto", prompt: "Bitcoin vs Ethereum price 2020 to 2024" },
   { category: "Health", prompt: "life expectancy in the US vs Japan since 1960" },
+  { category: "Health", prompt: "infant mortality US vs Japan since 1960" },
+  { category: "Health", prompt: "US life expectancy by gender since 1960" },
   { category: "Climate", prompt: "global temperature anomaly since 1980" },
+  { category: "Climate", prompt: "carbon dioxide concentration since 1980" },
+  { category: "Climate", prompt: "renewable energy share since 2000" },
   { category: "Work", prompt: "remote work adoption before and after 2020" },
+  { category: "Work", prompt: "office vacancy rates since 2015" },
+  { category: "Work", prompt: "commute time trends since 2000" },
   { category: "Culture", prompt: "streaming subscriptions vs cable TV since 2010" },
+  { category: "Culture", prompt: "music streaming revenue since 2010" },
+  { category: "Culture", prompt: "movie theater attendance since 2000" },
   { category: "Technology", prompt: "smartphone adoption in the United States" },
-  { category: "Food", prompt: "coffee prices over the last decade" }
+  { category: "Technology", prompt: "internet access in the United States since 2000" },
+  { category: "Technology", prompt: "social media adoption since 2005" },
+  { category: "Food", prompt: "coffee prices over the last decade" },
+  { category: "Food", prompt: "US food price inflation 2010 to 2024" },
+  { category: "Food", prompt: "gas prices over the last decade" }
 ];
 
-const CATEGORIES = ["Money", "Relationships", "Population", "Sports", "Crypto", "Health", "Climate", "Work", "Culture"];
+const CATEGORIES = [
+  "Money",
+  "Relationships",
+  "Population",
+  "Sports",
+  "Crypto",
+  "Health",
+  "Climate",
+  "Work",
+  "Culture",
+  "Technology",
+  "Food"
+];
 
 type ApiChartResponse =
   | { spec: ChartSpec; cached: boolean; mocked: boolean; latencyMs: number }
@@ -38,19 +73,20 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clarification, setClarification] = useState<ClarificationResponse | null>(null);
-  const [history, setHistory] = useState<ChartSpec[]>(() => {
-    if (typeof window === "undefined") return [];
-    const saved = window.localStorage.getItem("chartquery-history");
-    if (!saved) return [];
-    try {
-      return JSON.parse(saved) as ChartSpec[];
-    } catch {
-      return [];
-    }
-  });
+  const [history, setHistory] = useState<ChartSpec[]>([]);
   const [compareValue, setCompareValue] = useState("");
 
   useEffect(() => {
+    const saved = window.localStorage.getItem("chartquery-history");
+    if (saved) {
+      try {
+        const parsed = dedupeHistory(JSON.parse(saved) as ChartSpec[]);
+        queueMicrotask(() => setHistory(parsed));
+      } catch {
+        window.localStorage.removeItem("chartquery-history");
+      }
+    }
+
     fetch("/api/daily")
       .then((response) => response.json() as Promise<DailyStory>)
       .then((story) => {
@@ -99,7 +135,7 @@ export default function Home() {
       setSpec(payload.spec);
       setChartType(payload.spec.chartType);
       setHistory((current) => {
-        const next = [payload.spec, ...current].slice(0, 6);
+        const next = dedupeHistory([payload.spec, ...current]).slice(0, 6);
         window.localStorage.setItem("chartquery-history", JSON.stringify(next));
         return next;
       });
@@ -160,7 +196,16 @@ export default function Home() {
             </div>
 
             {daily ? (
-              <p className="mb-5 max-w-2xl text-xl leading-8 text-ink2">{daily.context}</p>
+              <div className="mb-5 max-w-2xl">
+                <h2 className="font-display text-3xl leading-none text-ink md:text-4xl">
+                  {daily.headline}
+                </h2>
+                <p className="mt-3 text-xl leading-8 text-ink2">{daily.context}</p>
+                <div className="mt-4 flex items-start gap-3 border-l-2 border-accent pl-4">
+                  <Lightbulb size={18} className="mt-1 shrink-0 text-accent" />
+                  <p className="text-sm leading-6 text-ink2">{daily.whyItMatters}</p>
+                </div>
+              </div>
             ) : null}
 
             <QueryBar suggestions={PROMPTS} loading={loading} onSubmit={runQuery} />
@@ -192,9 +237,9 @@ export default function Home() {
                   Recent
                 </p>
                 <div className="mt-3 space-y-2">
-                  {history.map((item) => (
+                  {history.map((item, index) => (
                     <button
-                      key={`${item.title}-${item.subtitle}`}
+                      key={`${item.title}-${index}`}
                       className="w-full border-l-2 border-rule bg-paper px-3 py-2 text-left text-sm text-ink2 hover:border-accent hover:text-ink"
                       onClick={() => {
                         setSpec(item);
@@ -254,6 +299,33 @@ export default function Home() {
                     What to Notice
                   </p>
                   <p className="mt-2 text-xl leading-8 text-ink">{spec.insight}</p>
+                  {spec.whyItMatters ? (
+                    <div className="mt-5 border-l-2 border-accent pl-4">
+                      <p className="font-mono text-xs uppercase tracking-[0.16em] text-ink3">
+                        Why This Matters
+                      </p>
+                      <p className="mt-2 text-base leading-7 text-ink2">{spec.whyItMatters}</p>
+                    </div>
+                  ) : null}
+                  {spec.followUpPrompts?.length ? (
+                    <div className="mt-5">
+                      <p className="font-mono text-xs uppercase tracking-[0.16em] text-ink3">
+                        Next Questions
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {spec.followUpPrompts.map((prompt) => (
+                          <button
+                            key={prompt}
+                            type="button"
+                            className="border border-rule px-3 py-2 text-left text-sm text-ink2 hover:border-ink hover:bg-ink hover:text-paper"
+                            onClick={() => runQuery(prompt)}
+                          >
+                            {prompt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <p className="mt-3 text-sm leading-6 text-ink3">Source: {spec.source}</p>
                 </div>
               </section>
@@ -305,7 +377,7 @@ export default function Home() {
             Browse by Curiosity
           </p>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {categoryPrompts.slice(0, 6).map((group) => (
+            {categoryPrompts.map((group) => (
               <div key={group.category} className="border border-rule p-4">
                 <h3 className="font-display text-2xl text-ink">{group.category}</h3>
                 <div className="mt-3 space-y-2">
@@ -327,4 +399,14 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+function dedupeHistory(items: ChartSpec[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = `${item.title}-${item.subtitle}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

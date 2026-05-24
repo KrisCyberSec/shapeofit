@@ -2,6 +2,7 @@ import type { ChartSpec, ChartType, DataSource } from "@/types/chart";
 
 const CHART_TYPES = new Set<ChartType>(["line", "bar", "area", "scatter"]);
 const DATA_SOURCES = new Set<DataSource>([
+  "live_treasury",
   "live_fred",
   "live_coingecko",
   "csv_upload",
@@ -43,7 +44,8 @@ export function normalizeSpec(spec: ChartSpec): ChartSpec {
     data: spec.data.filter((row) => row && typeof row === "object"),
     yKeys,
     colors: yKeys.map((_, index) => spec.colors[index] ?? DEFAULT_COLORS[index]),
-    seriesLabels: yKeys.map((key, index) => spec.seriesLabels?.[index] ?? labelize(key))
+    seriesLabels: yKeys.map((key, index) => spec.seriesLabels?.[index] ?? labelize(key)),
+    followUpPrompts: spec.followUpPrompts?.slice(0, 4)
   };
 }
 

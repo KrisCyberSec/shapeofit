@@ -7,9 +7,11 @@ ChartQuery is a visual learning app for everyday curiosity. Ask a plain-English 
 - Daily Visual Story homepage
 - Ask-anything query interface
 - Category prompt browsing
+- Richer daily story headlines, plain-language context, and "why this matters" explanations
 - Clarification options for vague queries
 - Multi-series charts with legends, tooltips, and stat cards
 - Compare-with flow for layering a second idea onto the current chart
+- Keyless live routes for U.S. Treasury public debt and CoinGecko crypto prices
 - Data freshness badges for approximate, historical estimate, uploaded, and live-ready sources
 - Anthropic Claude support when `ANTHROPIC_API_KEY` is configured
 - Deterministic local mock fallback when no API key is configured
@@ -37,6 +39,13 @@ ANTHROPIC_API_KEY=
 
 Without `ANTHROPIC_API_KEY`, the app still runs using local mock chart data.
 
+## Live Data Routes
+
+- `/api/live/money?limit=30` returns a chart spec from the U.S. Treasury Fiscal Data Debt to the Penny API.
+- `/api/live/crypto?coins=bitcoin,ethereum&days=30` returns a chart spec from the CoinGecko market chart API.
+
+The main `/api/chart` route automatically uses those live sources for matching money and crypto queries, then falls back to Claude or local mock data.
+
 ## Checks
 
 ```bash
@@ -51,8 +60,7 @@ The first audience is everyday people who understand ideas better visually. The 
 
 Next likely milestones:
 
-- Add more daily visual story templates and category prompts
-- Add live FRED and CoinGecko routes
+- Add live FRED macro routes
 - Add CSV upload for personal data visualization
 - Add shareable URLs and image previews
 - Add annotations on chart points

@@ -1,6 +1,7 @@
 export type ChartType = "line" | "bar" | "area" | "scatter";
 
 export type DataSource =
+  | "live_treasury"
   | "live_fred"
   | "live_coingecko"
   | "csv_upload"
@@ -24,8 +25,10 @@ export interface ChartSpec {
   unit: string;
   source: string;
   insight: string;
+  whyItMatters?: string;
   dataSource: DataSource;
   annotations?: ChartAnnotation[];
+  followUpPrompts?: string[];
   seriesLabels?: string[];
 }
 
@@ -46,6 +49,9 @@ export interface DailyStory {
   date: string;
   category: string;
   query: string;
+  headline: string;
   context: string;
+  whyItMatters: string;
+  followUpPrompts: string[];
   spec: ChartSpec;
 }
