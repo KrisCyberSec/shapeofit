@@ -2,6 +2,10 @@ import type { ChartPointSelection, ChartSpec } from "@/types/chart";
 import { compactNumber } from "./chart-utils";
 
 export function chartStorageKey(spec: ChartSpec) {
+  return `shapeofit-annotations:${spec.generatedFrom ?? spec.title}:${spec.subtitle}`;
+}
+
+export function legacyChartStorageKey(spec: ChartSpec) {
   return `chartquery-annotations:${spec.generatedFrom ?? spec.title}:${spec.subtitle}`;
 }
 

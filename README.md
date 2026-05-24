@@ -1,6 +1,6 @@
-# ChartQuery
+# ShapeOfIt
 
-ChartQuery is a visual learning app for everyday curiosity. Ask a plain-English data question and get a clear, interactive chart with a short takeaway, visible data-confidence labeling, categories, daily visual stories, and comparison support.
+ShapeOfIt is a visual answer app for everyday curiosity. Ask a plain-English data question and get a clear, interactive chart with a short takeaway, visible data-confidence labeling, categories, daily visual stories, and comparison support.
 
 ## What Works Now
 
@@ -43,7 +43,7 @@ npm run dev -- -p 3010 -H 127.0.0.1
 Copy `.env.example` to `.env.local` and add keys as needed.
 
 ```env
-NEXT_PUBLIC_SITE_URL=https://chartquery.vercel.app
+NEXT_PUBLIC_SITE_URL=https://shapeofit.app
 ANTHROPIC_API_KEY=
 ```
 
@@ -70,7 +70,7 @@ npm run build
 
 ## Deployment Direction
 
-The production stack is Vercel for Next.js hosting with Cloudflare in front for DNS, WAF, rate limiting, bot controls, and Turnstile. See [docs/STACK.md](docs/STACK.md).
+The production stack is Vercel for Next.js hosting with Cloudflare in front for DNS, WAF, rate limiting, bot controls, and Turnstile. Target domain: `shapeofit.app`. See [docs/STACK.md](docs/STACK.md).
 
 ## Product Direction
 

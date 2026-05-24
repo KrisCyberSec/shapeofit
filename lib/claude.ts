@@ -1,7 +1,8 @@
 import type { ChartSpec } from "@/types/chart";
 import { isChartSpec, normalizeSpec } from "./chart-utils";
+import { BRAND_NAME } from "./brand";
 
-const SYSTEM_PROMPT = `You are ChartQuery, a visual learning data engine for everyday people.
+const SYSTEM_PROMPT = `You are ${BRAND_NAME}, a visual learning data engine for everyday people.
 Return ONLY valid JSON. No markdown, no backticks, no explanation.
 
 Shape:

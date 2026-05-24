@@ -10,7 +10,8 @@ import type {
   ClarificationResponse,
   DailyStory
 } from "@/types/chart";
-import { chartStorageKey } from "@/lib/annotations";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { chartStorageKey, legacyChartStorageKey } from "@/lib/annotations";
 import { AnnotationPanel } from "@/components/AnnotationPanel";
 import { ChartHeader } from "@/components/ChartHeader";
 import { ChartRenderer } from "@/components/ChartRenderer";
@@ -99,6 +100,9 @@ const COMPARISON_PRESETS = [
   }
 ];
 
+const HISTORY_STORAGE_KEY = "shapeofit-history";
+const LEGACY_HISTORY_STORAGE_KEY = "chartquery-history";
+
 type ApiChartResponse =
   | { spec: ChartSpec; cached: boolean; mocked: boolean; latencyMs: number }
   | ClarificationResponse;
@@ -125,13 +129,17 @@ export default function Home() {
   useEffect(() => {
     const initialUrl = new URL(window.location.href);
     const initialQuery = initialUrl.searchParams.get("q")?.trim() ?? "";
-    const saved = window.localStorage.getItem("chartquery-history");
+    const saved =
+      window.localStorage.getItem(HISTORY_STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_HISTORY_STORAGE_KEY);
     if (saved) {
       try {
         const parsed = dedupeHistory(JSON.parse(saved) as ChartSpec[]);
         queueMicrotask(() => setHistory(parsed));
+        window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(parsed));
       } catch {
-        window.localStorage.removeItem("chartquery-history");
+        window.localStorage.removeItem(HISTORY_STORAGE_KEY);
+        window.localStorage.removeItem(LEGACY_HISTORY_STORAGE_KEY);
       }
     }
 
@@ -185,13 +193,18 @@ export default function Home() {
       return;
     }
 
-    const saved = window.localStorage.getItem(chartStorageKey(spec));
+    const storageKey = chartStorageKey(spec);
+    const legacyStorageKey = legacyChartStorageKey(spec);
+    const saved =
+      window.localStorage.getItem(storageKey) ?? window.localStorage.getItem(legacyStorageKey);
     let parsed: ChartAnnotation[] = [];
     if (saved) {
       try {
         parsed = JSON.parse(saved) as ChartAnnotation[];
+        window.localStorage.setItem(storageKey, JSON.stringify(parsed));
       } catch {
-        window.localStorage.removeItem(chartStorageKey(spec));
+        window.localStorage.removeItem(storageKey);
+        window.localStorage.removeItem(legacyStorageKey);
       }
     }
 
@@ -254,7 +267,7 @@ export default function Home() {
       }
       setHistory((current) => {
         const next = dedupeHistory([nextSpec, ...current]).slice(0, 6);
-        window.localStorage.setItem("chartquery-history", JSON.stringify(next));
+        window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
         return next;
       });
     } catch (caught) {
@@ -362,15 +375,15 @@ export default function Home() {
           <header className="double-rule flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-accent">
-                ChartQuery
+                {BRAND_NAME}
               </p>
               <h1 className="mt-2 font-display text-5xl leading-none text-ink md:text-7xl">
-                See what the data means.
+                {BRAND_TAGLINE}
               </h1>
             </div>
             <p className="max-w-sm text-base leading-7 text-ink2">
-              A visual learning tool for everyday curiosity: ask a question, compare things,
-              and let the shape of the data make it click.
+              A visual answer tool for everyday curiosity: ask a question, compare things,
+              and let the shape of the answer make it click.
             </p>
           </header>
         </div>
@@ -769,7 +782,7 @@ async function downloadChartPng(container: HTMLElement, spec: ChartSpec) {
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#c0392b";
     context.font = "18px monospace";
-    context.fillText("CHARTQUERY", 64, 62);
+    context.fillText(BRAND_NAME.toUpperCase(), 64, 62);
     context.fillStyle = "#1a1814";
     context.font = "44px Georgia, serif";
     wrapText(context, spec.title, 64, 126, 880, 50);

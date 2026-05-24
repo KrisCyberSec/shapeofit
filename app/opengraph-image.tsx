@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 export const size = {
   width: 1200,
@@ -40,15 +41,15 @@ export default function Image() {
               textTransform: "uppercase"
             }}
           >
-            ChartQuery
+            {BRAND_NAME}
           </div>
           <div style={{ fontSize: 92, lineHeight: 0.95, marginTop: 28 }}>
-            See what the data means.
+            {BRAND_TAGLINE}
           </div>
         </div>
         <div style={{ display: "flex", gap: 32, fontFamily: "Arial", fontSize: 30, color: "#4a4640" }}>
           <div>Ask a question.</div>
-          <div>See the chart.</div>
+          <div>See the shape.</div>
           <div>Trust the source.</div>
         </div>
       </div>

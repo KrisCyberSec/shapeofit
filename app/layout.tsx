@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
+import { BRAND_DESCRIPTION, BRAND_NAME, DEFAULT_SITE_URL } from "@/lib/brand";
 import "./globals.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://chartquery.vercel.app";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? DEFAULT_SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "ChartQuery",
-  description: "Ask plain-language data questions and get trustworthy visual explanations.",
+  title: BRAND_NAME,
+  description: BRAND_DESCRIPTION,
   openGraph: {
-    title: "ChartQuery",
-    description: "Ask plain-language data questions and get trustworthy visual explanations.",
+    title: BRAND_NAME,
+    description: BRAND_DESCRIPTION,
     type: "website"
   },
   twitter: {
     card: "summary_large_image",
-    title: "ChartQuery",
-    description: "Ask plain-language data questions and get trustworthy visual explanations."
+    title: BRAND_NAME,
+    description: BRAND_DESCRIPTION
   }
 };
 

@@ -1,11 +1,12 @@
 # Stack Direction
 
-ChartQuery is intended to become a real product, not just a static demo. The preferred long-term stack is:
+ShapeOfIt is intended to become a real product, not just a static demo. The preferred long-term stack is:
 
 - **App hosting:** Vercel
 - **DNS and security edge:** Cloudflare
 - **Framework:** Standard Next.js App Router route handlers
 - **Current host:** Vercel at `https://chartquery.vercel.app`
+- **Target production domain:** `shapeofit.app`
 
 ## Why This Direction
 
@@ -23,20 +24,19 @@ Cloudflare should sit in front of the production domain for DNS and edge securit
 
 ## Production Cutover Plan
 
-1. Connect the Vercel project to `KrisCyberSec/chartquery` for automatic deployments after the Vercel account has a GitHub login connection.
-2. Set Vercel build command to `npm run build`.
-3. Set or update Vercel environment variables:
+1. Buy `shapeofit.app`.
+2. Add `shapeofit.app` to the Vercel project and make it primary.
+3. Manage the domain in Cloudflare DNS and point it to Vercel using Vercel's domain instructions.
+4. Enable Cloudflare proxy once Vercel verifies the domain.
+5. Set or update Vercel environment variables:
    - `NEXT_PUBLIC_SITE_URL`
    - `ANTHROPIC_API_KEY` when Claude generation should be live
-4. Add the production domain to Vercel.
-5. Manage the domain in Cloudflare DNS and point it to Vercel using Vercel's domain instructions.
-6. Enable Cloudflare proxy once Vercel verifies the domain.
-7. Configure Cloudflare security rules:
+6. Configure Cloudflare security rules:
    - Managed WAF rules
    - Rate limits for `/api/chart`, `/api/live/*`, and future auth endpoints
    - Turnstile for signup, login, and any high-cost AI generation flow
    - Bot protections that do not block normal search/social preview crawlers
-8. Verify:
+7. Verify:
    - `/`
    - `/api/health`
    - `/api/chart`
@@ -44,4 +44,4 @@ Cloudflare should sit in front of the production domain for DNS and edge securit
 
 ## Current Repo State
 
-The Vercel project is deployed manually from this repo. GitHub auto-linking still needs the Vercel account to add a GitHub login connection before every push can deploy automatically.
+The Vercel project is connected to GitHub and deploys from `main`. Until `shapeofit.app` is purchased and configured, the working production URL remains `https://chartquery.vercel.app`.

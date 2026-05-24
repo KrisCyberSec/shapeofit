@@ -2,7 +2,7 @@
 
 ## Positioning
 
-ChartQuery helps people understand the world visually. The core interaction is simple: ask a question, see the data, and get a clear explanation of what matters.
+ShapeOfIt helps people understand the world visually. The core interaction is simple: ask a question, see the shape of the answer, and get a clear explanation of what matters.
 
 ## Design Principles
 
@@ -43,4 +43,4 @@ Deferred:
 
 ## Stack Direction
 
-Use Vercel as the primary Next.js host and Cloudflare as the DNS/security edge. Keep new work portable by default: standard Next.js route handlers, platform-neutral environment variables, and no Netlify-specific product services. The live Vercel MVP is `https://chartquery.vercel.app`; the next infrastructure step is attaching a custom domain through Cloudflare.
+Use Vercel as the primary Next.js host and Cloudflare as the DNS/security edge. Keep new work portable by default: standard Next.js route handlers, platform-neutral environment variables, and no Netlify-specific product services. The target production domain is `shapeofit.app`; the next infrastructure step is buying the domain, attaching it to Vercel, and managing DNS/security through Cloudflare.
