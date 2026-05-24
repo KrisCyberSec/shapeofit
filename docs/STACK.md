@@ -5,7 +5,7 @@ ChartQuery is intended to become a real product, not just a static demo. The pre
 - **App hosting:** Vercel
 - **DNS and security edge:** Cloudflare
 - **Framework:** Standard Next.js App Router route handlers
-- **Current temporary host:** Netlify at `https://chartquery.netlify.app`
+- **Current host:** Vercel at `https://chartquery.vercel.app`
 
 ## Why This Direction
 
@@ -23,9 +23,9 @@ Cloudflare should sit in front of the production domain for DNS and edge securit
 
 ## Production Cutover Plan
 
-1. Create a Vercel project from `KrisCyberSec/chartquery`.
+1. Connect the Vercel project to `KrisCyberSec/chartquery` for automatic deployments after the Vercel account has a GitHub login connection.
 2. Set Vercel build command to `npm run build`.
-3. Set Vercel environment variables:
+3. Set or update Vercel environment variables:
    - `NEXT_PUBLIC_SITE_URL`
    - `ANTHROPIC_API_KEY` when Claude generation should be live
 4. Add the production domain to Vercel.
@@ -44,4 +44,4 @@ Cloudflare should sit in front of the production domain for DNS and edge securit
 
 ## Current Repo State
 
-The Netlify config remains only because the MVP is currently deployed there. After the Vercel production deployment is verified, remove the Netlify runtime dependency and `netlify.toml`.
+The Vercel project is deployed manually from this repo. GitHub auto-linking still needs the Vercel account to add a GitHub login connection before every push can deploy automatically.
