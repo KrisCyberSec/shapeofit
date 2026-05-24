@@ -1,4 +1,4 @@
-import { Copy, Info } from "lucide-react";
+import { Copy, Download, Info } from "lucide-react";
 import type { ChartSpec, ChartType } from "@/types/chart";
 import { DataFreshnessTag } from "./DataFreshnessTag";
 
@@ -8,14 +8,18 @@ export function ChartHeader({
   spec,
   chartType,
   copyStatus,
+  exportStatus,
   onCopyLink,
+  onDownloadImage,
   onOpenSource,
   onChartTypeChange
 }: {
   spec: ChartSpec;
   chartType: ChartType;
   copyStatus?: "idle" | "copied" | "ready";
+  exportStatus?: "idle" | "saved" | "failed";
   onCopyLink?: () => void;
+  onDownloadImage?: () => void;
   onOpenSource?: () => void;
   onChartTypeChange: (type: ChartType) => void;
 }) {
@@ -49,8 +53,17 @@ export function ChartHeader({
             <Copy size={14} />
             {copyStatus === "copied" ? "Copied" : copyStatus === "ready" ? "Link Ready" : "Share"}
           </button>
+          <button
+            type="button"
+            className="inline-flex h-9 items-center gap-2 border border-rule px-3 font-mono text-[11px] uppercase text-ink2 hover:border-ink hover:text-ink"
+            onClick={onDownloadImage}
+            title="Download chart image"
+          >
+            <Download size={14} />
+            {exportStatus === "saved" ? "Saved" : exportStatus === "failed" ? "Failed" : "PNG"}
+          </button>
         </div>
-        <div className="grid grid-cols-4 border border-rule bg-paper">
+        <div className="grid grid-cols-4 overflow-hidden border border-rule bg-paper">
           {CHART_TYPES.map((type) => (
             <button
               key={type}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, GitCompareArrows, Lightbulb, Sparkles } from "lucide-react";
 import type {
   ChartAnnotation,
@@ -76,6 +76,29 @@ const CATEGORIES = [
   "Food"
 ];
 
+const COMPARISON_PRESETS = [
+  {
+    label: "Wages vs inflation",
+    baseQuery: "wages since 2020",
+    compareQuery: "US inflation rate since 2020"
+  },
+  {
+    label: "Rates vs home prices",
+    baseQuery: "mortgage rates since 2020",
+    compareQuery: "home prices since 2020"
+  },
+  {
+    label: "Jobs vs Fed",
+    baseQuery: "unemployment rate since 2020",
+    compareQuery: "fed funds rate since 2020"
+  },
+  {
+    label: "Bitcoin vs Ethereum",
+    baseQuery: "Bitcoin price over the last year",
+    compareQuery: "Ethereum price over the last year"
+  }
+];
+
 type ApiChartResponse =
   | { spec: ChartSpec; cached: boolean; mocked: boolean; latencyMs: number }
   | ClarificationResponse;
@@ -92,13 +115,16 @@ export default function Home() {
   const [compareValue, setCompareValue] = useState("");
   const [currentQuery, setCurrentQuery] = useState("");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "ready">("idle");
+  const [exportStatus, setExportStatus] = useState<"idle" | "saved" | "failed">("idle");
   const [manualShareUrl, setManualShareUrl] = useState("");
   const [sourceOpen, setSourceOpen] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<ChartPointSelection | null>(null);
   const [annotations, setAnnotations] = useState<ChartAnnotation[]>([]);
+  const chartSectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const initialQuery = new URL(window.location.href).searchParams.get("q")?.trim() ?? "";
+    const initialUrl = new URL(window.location.href);
+    const initialQuery = initialUrl.searchParams.get("q")?.trim() ?? "";
     const saved = window.localStorage.getItem("chartquery-history");
     if (saved) {
       try {
@@ -171,7 +197,7 @@ export default function Home() {
 
     queueMicrotask(() => {
       setSelectedPoint(null);
-      setAnnotations(parsed);
+      setAnnotations(mergeAnnotations(readSharedAnnotations(), parsed));
     });
   }, [spec]);
 
@@ -194,6 +220,7 @@ export default function Home() {
     setError(null);
     setClarification(null);
     setCopyStatus("idle");
+    setExportStatus("idle");
     setManualShareUrl("");
 
     try {
@@ -247,7 +274,7 @@ export default function Home() {
   async function handleCopyLink() {
     const query = currentQuery || spec?.generatedFrom;
     if (!query) return;
-    const shareUrl = chartUrlForQuery(query);
+    const shareUrl = chartUrlForQuery(query, annotations);
 
     try {
       await copyTextToClipboard(shareUrl);
@@ -257,6 +284,18 @@ export default function Home() {
     } catch {
       setCopyStatus("ready");
       setManualShareUrl(shareUrl);
+    }
+  }
+
+  async function handleDownloadImage() {
+    if (!spec || !chartSectionRef.current) return;
+
+    try {
+      await downloadChartPng(chartSectionRef.current, spec);
+      setExportStatus("saved");
+      window.setTimeout(() => setExportStatus("idle"), 1600);
+    } catch {
+      setExportStatus("failed");
     }
   }
 
@@ -273,6 +312,47 @@ export default function Home() {
       window.localStorage.setItem(chartStorageKey(spec), JSON.stringify(next));
       return next;
     });
+  }
+
+  async function runComparisonPreset(baseQuery: string, compareQuery: string) {
+    setLoading(true);
+    setError(null);
+    setClarification(null);
+    setManualShareUrl("");
+
+    try {
+      const baseResponse = await fetch("/api/chart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: baseQuery })
+      });
+      const basePayload = (await baseResponse.json()) as ApiChartResponse | ApiErrorResponse;
+      if (!baseResponse.ok || !("spec" in basePayload)) {
+        throw new Error("Could not load the first comparison chart.");
+      }
+
+      const compareResponse = await fetch("/api/chart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: compareQuery, compareWith: basePayload.spec })
+      });
+      const comparePayload = (await compareResponse.json()) as ApiChartResponse | ApiErrorResponse;
+      if (!compareResponse.ok || !("spec" in comparePayload)) {
+        throw new Error("Could not layer the comparison chart.");
+      }
+
+      const generatedFrom = `${baseQuery} vs ${compareQuery}`;
+      const nextSpec = { ...comparePayload.spec, generatedFrom };
+      setSpec(nextSpec);
+      setChartType(nextSpec.chartType);
+      setCurrentQuery(generatedFrom);
+      setSelectedPoint(null);
+      syncChartUrl(generatedFrom);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -413,12 +493,14 @@ export default function Home() {
 
           {spec ? (
             <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-              <section className="border border-rule bg-paper p-4 md:p-6">
+              <section ref={chartSectionRef} className="border border-rule bg-paper p-4 md:p-6">
                 <ChartHeader
                   spec={spec}
                   chartType={chartType}
                   copyStatus={copyStatus}
+                  exportStatus={exportStatus}
                   onCopyLink={handleCopyLink}
+                  onDownloadImage={handleDownloadImage}
                   onOpenSource={() => setSourceOpen(true)}
                   onChartTypeChange={setChartType}
                 />
@@ -511,6 +593,25 @@ export default function Home() {
                   </p>
                 </div>
 
+                <div className="border border-rule bg-paper p-4">
+                  <p className="font-mono text-xs uppercase tracking-[0.16em] text-ink3">
+                    Comparison Presets
+                  </p>
+                  <div className="mt-3 grid gap-2">
+                    {COMPARISON_PRESETS.map((preset) => (
+                      <button
+                        key={preset.label}
+                        className="border border-rule px-3 py-2 text-left text-sm text-ink2 hover:border-ink hover:bg-ink hover:text-paper"
+                        type="button"
+                        disabled={loading}
+                        onClick={() => runComparisonPreset(preset.baseQuery, preset.compareQuery)}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <StatCards spec={spec} />
                 <AnnotationPanel
                   spec={spec}
@@ -573,9 +674,14 @@ function dedupeHistory(items: ChartSpec[]) {
   });
 }
 
-function chartUrlForQuery(query: string) {
+function chartUrlForQuery(query: string, annotations: ChartAnnotation[] = []) {
   const url = new URL(window.location.href);
   url.searchParams.set("q", query);
+  if (annotations.length) {
+    url.searchParams.set("notes", encodeAnnotations(annotations));
+  } else {
+    url.searchParams.delete("notes");
+  }
   return url.toString();
 }
 
@@ -611,4 +717,119 @@ async function copyTextToClipboard(text: string) {
   } finally {
     document.body.removeChild(textarea);
   }
+}
+
+function readSharedAnnotations() {
+  const encoded = new URL(window.location.href).searchParams.get("notes");
+  if (!encoded) return [];
+
+  try {
+    return JSON.parse(decodeURIComponent(escape(window.atob(encoded)))) as ChartAnnotation[];
+  } catch {
+    return [];
+  }
+}
+
+function encodeAnnotations(annotations: ChartAnnotation[]) {
+  const shareable = annotations.slice(0, 6);
+  return window.btoa(unescape(encodeURIComponent(JSON.stringify(shareable))));
+}
+
+function mergeAnnotations(...groups: ChartAnnotation[][]) {
+  const seen = new Set<string>();
+  return groups
+    .flat()
+    .filter((annotation) => {
+      const key = `${annotation.xValue}-${annotation.note}-${annotation.createdAt}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12);
+}
+
+async function downloadChartPng(container: HTMLElement, spec: ChartSpec) {
+  const svg = container.querySelector(".recharts-wrapper svg");
+  if (!(svg instanceof SVGSVGElement)) throw new Error("Chart SVG was not found");
+
+  const serializer = new XMLSerializer();
+  const svgText = serializer.serializeToString(svg);
+  const svgBlob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+  const imageUrl = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = await loadImage(imageUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = 1200;
+    canvas.height = 760;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas context was unavailable");
+
+    context.fillStyle = "#faf8f4";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#c0392b";
+    context.font = "18px monospace";
+    context.fillText("CHARTQUERY", 64, 62);
+    context.fillStyle = "#1a1814";
+    context.font = "44px Georgia, serif";
+    wrapText(context, spec.title, 64, 126, 880, 50);
+    context.fillStyle = "#4a4640";
+    context.font = "22px Arial, sans-serif";
+    wrapText(context, spec.subtitle, 64, 184, 940, 30);
+    context.drawImage(image, 64, 245, 1040, 320);
+    context.fillStyle = "#1a1814";
+    context.font = "26px Arial, sans-serif";
+    wrapText(context, spec.insight, 64, 630, 980, 34);
+    context.fillStyle = "#8a8580";
+    context.font = "16px Arial, sans-serif";
+    wrapText(context, `Source: ${spec.source}`, 64, 718, 980, 22);
+
+    const pngUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = pngUrl;
+    link.download = `${slugify(spec.title)}.png`;
+    link.click();
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+function wrapText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number
+) {
+  const words = text.split(" ");
+  let line = "";
+  words.forEach((word) => {
+    const testLine = `${line}${word} `;
+    if (context.measureText(testLine).width > maxWidth && line) {
+      context.fillText(line.trim(), x, y);
+      line = `${word} `;
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  });
+  context.fillText(line.trim(), x, y);
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 72);
 }

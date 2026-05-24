@@ -28,6 +28,10 @@ Included:
 - Keyless World Bank route for population, urbanization, life expectancy, and country rankings
 - Shareable query URLs and source-trust details
 - Clickable point explanations and local chart notes
+- Shareable chart-note URLs
+- PNG chart image export and social preview metadata
+- Comparison presets for high-value starter questions
+- Query intent routing for common everyday phrasing
 - Editorial UI and chart rendering
 
 Deferred:
@@ -35,5 +39,4 @@ Deferred:
 - Accounts
 - Payments
 - Database persistence
-- Screenshot API
 - CSV upload

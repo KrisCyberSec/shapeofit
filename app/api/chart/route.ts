@@ -5,6 +5,7 @@ import { getClarification } from "@/lib/clarify";
 import { mergeComparison, normalizeSpec } from "@/lib/chart-utils";
 import { liveSpecForQuery } from "@/lib/live-data";
 import { mockChartForQuery } from "@/lib/mock-data";
+import { routeQueryIntent } from "@/lib/query-router";
 
 export const dynamic = "force-dynamic";
 
@@ -20,16 +21,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const query = body.query?.trim();
-  if (!query) {
+  const rawQuery = body.query?.trim();
+  if (!rawQuery) {
     return NextResponse.json(
       { error: "empty_query", message: "Type something you want to see visualized." },
       { status: 400 }
     );
   }
+  const query = routeQueryIntent(rawQuery);
 
   if (!body.compareWith) {
-    const clarification = getClarification(query);
+    const clarification = getClarification(rawQuery);
     if (clarification) return NextResponse.json(clarification);
   }
 
