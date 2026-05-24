@@ -4,6 +4,7 @@ const CHART_TYPES = new Set<ChartType>(["line", "bar", "area", "scatter"]);
 const DATA_SOURCES = new Set<DataSource>([
   "live_treasury",
   "live_fred",
+  "live_worldbank",
   "live_coingecko",
   "csv_upload",
   "training",

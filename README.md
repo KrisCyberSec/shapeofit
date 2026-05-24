@@ -14,6 +14,7 @@ ChartQuery is a visual learning app for everyday curiosity. Ask a plain-English 
 - Compare-with flow for layering a second idea onto the current chart
 - Keyless live routes for U.S. Treasury public debt and CoinGecko crypto prices
 - Keyless FRED macro charts for inflation, mortgage rates, unemployment, Fed funds, gas prices, wages, food inflation, and home prices
+- Keyless World Bank charts for world population, urbanization, life expectancy, and largest countries by population
 - Shareable query URLs with copy-link support
 - Source details drawer with freshness, assumptions, and source links when available
 - Data freshness badges for approximate, historical estimate, uploaded, and live-ready sources
@@ -48,8 +49,9 @@ Without `ANTHROPIC_API_KEY`, the app still runs using local mock chart data.
 - `/api/live/money?limit=30` returns a chart spec from the U.S. Treasury Fiscal Data Debt to the Penny API.
 - `/api/live/crypto?coins=bitcoin,ethereum&days=30` returns a chart spec from the CoinGecko market chart API.
 - `/api/live/macro?q=US%20inflation%20rate%20since%202020` returns a chart spec from public FRED graph data.
+- `/api/live/worldbank?q=life%20expectancy%20in%20the%20US%20vs%20Japan%20since%201960` returns a chart spec from the World Bank indicators API.
 
-The main `/api/chart` route automatically uses those live sources for matching money, macro, and crypto queries, then falls back to Claude or local mock data.
+The main `/api/chart` route automatically uses those live sources for matching money, macro, population, health, and crypto queries, then falls back to Claude or local mock data.
 
 ## Checks
 

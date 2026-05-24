@@ -25,6 +25,7 @@ Included:
 - Chart generation endpoint
 - Keyless live data routes for Treasury public debt and CoinGecko crypto prices
 - Keyless FRED macro route for inflation, rates, jobs, gas prices, wages, and home prices
+- Keyless World Bank route for population, urbanization, life expectancy, and country rankings
 - Shareable query URLs and source-trust details
 - Clickable point explanations and local chart notes
 - Editorial UI and chart rendering
@@ -36,4 +37,3 @@ Deferred:
 - Database persistence
 - Screenshot API
 - CSV upload
-- Live World Bank feeds

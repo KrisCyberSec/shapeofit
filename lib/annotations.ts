@@ -107,6 +107,33 @@ export function explainPoint(spec: ChartSpec, selection: ChartPointSelection) {
     };
   }
 
+  if (spec.dataSource === "live_worldbank" && lowerTitle.includes("life expectancy")) {
+    return {
+      title: "Health and society compressed into one line",
+      body: movement
+        ? `${movement} Life expectancy points reflect many forces at once: health systems, income, safety, behavior, and public-health shocks.`
+        : "This point shows national life expectancy at birth, which is best read as a broad social-health signal rather than a single-cause measure."
+    };
+  }
+
+  if (spec.dataSource === "live_worldbank" && lowerTitle.includes("urban")) {
+    return {
+      title: "Urbanization checkpoint",
+      body: movement
+        ? `${movement} Urbanization changes infrastructure, housing, transit, energy use, and where economic opportunity concentrates.`
+        : "This point shows the share of people living in urban areas, a slow-moving but powerful structural trend."
+    };
+  }
+
+  if (spec.dataSource === "live_worldbank" && lowerTitle.includes("population")) {
+    return {
+      title: "Population scale checkpoint",
+      body: movement
+        ? `${movement} Population changes slowly, so the important read is the slope across many points rather than one year.`
+        : "This point anchors the population scale, which shapes labor markets, schools, housing, food demand, and climate planning."
+    };
+  }
+
   if (lowerTitle.includes("marriage")) {
     return {
       title: "A generational comparison point",

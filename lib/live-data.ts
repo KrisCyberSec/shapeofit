@@ -1,6 +1,7 @@
 import type { ChartSpec } from "@/types/chart";
 import { macroSpecForQuery } from "./macro-data";
 import { normalizeSpec } from "./chart-utils";
+import { worldBankSpecForQuery } from "./world-bank-data";
 
 const colors = ["#c0392b", "#2980b9", "#16a085"];
 
@@ -33,6 +34,9 @@ export async function liveSpecForQuery(query: string): Promise<ChartSpec | null>
 
   const macroSpec = await macroSpecForQuery(query);
   if (macroSpec) return macroSpec;
+
+  const worldBankSpec = await worldBankSpecForQuery(query);
+  if (worldBankSpec) return worldBankSpec;
 
   if (isCryptoQuery(lower)) {
     const coins = coinsForQuery(lower);
