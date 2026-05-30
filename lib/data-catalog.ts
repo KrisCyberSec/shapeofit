@@ -2,6 +2,7 @@ export type DataProviderId =
   | "fred"
   | "worldbank"
   | "treasury"
+  | "dhs"
   | "coingecko"
   | "bls"
   | "bea"
@@ -13,6 +14,7 @@ export type DataAdapterId =
   | "fred"
   | "worldbank"
   | "treasury"
+  | "dhs_immigration"
   | "coingecko"
   | "living_costs"
   | "housing_affordability";
@@ -356,6 +358,51 @@ export const DATA_CATALOG: DataCatalogEntry[] = [
       "Supported coins are currently limited to Bitcoin, Ethereum, Solana, and Dogecoin."
     ],
     seriesIds: ["bitcoin", "ethereum", "solana", "dogecoin"]
+  },
+  {
+    id: "dhs.lpr.admissions.us",
+    label: "US lawful permanent resident admissions",
+    category: "population",
+    provider: "dhs",
+    providerLabel: "DHS Office of Homeland Security Statistics",
+    adapter: "dhs_immigration",
+    adapterKey: "lpr_admissions",
+    status: "supported",
+    cadence: "annual fiscal-year table",
+    unit: "people",
+    sourceUrl: "https://ohss.dhs.gov/topics/immigration/yearbook/2023/table1",
+    route: "/api/live/immigration",
+    examples: [
+      "how many immigrants have come to the United States in the past 20 years",
+      "US immigration over the past 20 years",
+      "lawful permanent residents admitted since 2004"
+    ],
+    aliases: [
+      "immigration",
+      "immigrants",
+      "immigrants came",
+      "immigrants have come",
+      "came to the United States",
+      "legal immigration",
+      "lawful permanent residents",
+      "permanent residents",
+      "green cards",
+      "green card holders",
+      "LPR admissions"
+    ],
+    patterns: [
+      /\bimmigr(?:ant|ants|ation)\b.*\b(?:united states|u\.s\.|us|america)\b/i,
+      /\b(?:united states|u\.s\.|us|america)\b.*\bimmigr(?:ant|ants|ation)\b/i,
+      /\blawful permanent residents?\b/i,
+      /\bgreen cards?\b/i,
+      /\bLPR\b.*\b(?:admissions?|status)\b/i
+    ],
+    limitations: [
+      "Counts people obtaining lawful permanent resident status, not every border crossing or temporary stay.",
+      "Includes new arrivals and people already in the United States who adjusted status.",
+      "DHS Yearbook Table 1 is annual fiscal-year data; the latest mapped table runs through fiscal year 2023."
+    ],
+    seriesIds: ["DHS Yearbook Table 1"]
   },
   {
     id: "worldbank.population.world",

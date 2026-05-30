@@ -1,8 +1,6 @@
 import type { DataCatalogEntry } from "./data-catalog";
-import {
-  plannedCatalogEntryForQuery,
-  resolveSupportedCatalogEntry
-} from "./data-catalog";
+import { plannedCatalogEntryForQuery, resolveSupportedCatalogEntry } from "./data-catalog";
+import { bestPlannedCatalogMatch, bestSupportedCatalogMatch } from "./query-intelligence";
 import { routeQueryIntent, splitAnyComparisonQuery, splitComparisonQuery } from "./query-router";
 
 export type ChartPlan =
@@ -102,14 +100,17 @@ export function planChartQuery(rawQuery: string): ChartPlan {
   const partialComparison = partialUnsupportedComparison(rawQuery);
   if (partialComparison) return partialComparison;
 
-  const entry = resolveSupportedCatalogEntry(routedQuery);
-  if (entry) {
+  const sourceMatch =
+    bestSupportedCatalogMatch(routedQuery) ??
+    bestSupportedCatalogMatch(rawQuery) ??
+    entryMatch(resolveSupportedCatalogEntry(routedQuery));
+  if (sourceMatch) {
     return {
       kind: "source",
       intent: "single_metric",
-      confidence: 0.86,
+      confidence: Math.max(0.68, sourceMatch.confidence),
       query: routedQuery,
-      entry
+      entry: sourceMatch.entry
     };
   }
 
@@ -123,7 +124,8 @@ export function planChartQuery(rawQuery: string): ChartPlan {
 
 function partialUnsupportedComparison(rawQuery: string): ChartPlan | null {
   const routedQuery = routeQueryIntent(rawQuery);
-  const wholeQueryEntry = resolveSupportedCatalogEntry(routedQuery);
+  const wholeQueryEntry =
+    bestSupportedCatalogMatch(routedQuery)?.entry ?? resolveSupportedCatalogEntry(routedQuery);
   if (
     wholeQueryEntry?.examples.some(
       (example) => normalizeForExactMatch(example) === normalizeForExactMatch(routedQuery)
@@ -139,8 +141,8 @@ function partialUnsupportedComparison(rawQuery: string): ChartPlan | null {
   const sides = comparison.map((side) => withDefaultWindow(routeQueryIntent(side), sharedWindow));
   const statuses = sides.map((side) => ({
     query: side,
-    supported: Boolean(resolveSupportedCatalogEntry(side)),
-    planned: plannedCatalogEntryForQuery(side)
+    supported: Boolean(bestSupportedCatalogMatch(side) ?? resolveSupportedCatalogEntry(side)),
+    planned: bestPlannedCatalogMatch(side)?.entry ?? plannedCatalogEntryForQuery(side)
   }));
   const missing = statuses.filter((status) => !status.supported);
   if (!missing.length) return null;
@@ -196,4 +198,8 @@ function withDefaultWindow(query: string, fallbackWindow: string) {
 
 function normalizeForExactMatch(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function entryMatch(entry: DataCatalogEntry | null) {
+  return entry ? { entry, confidence: 0.86 } : null;
 }

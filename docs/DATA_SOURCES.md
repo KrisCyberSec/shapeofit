@@ -11,6 +11,7 @@ Some questions are not single-source lookups. They are planned first by `lib/cha
 1. Official public sources first:
    - FRED for US macro time series.
    - BLS, BEA, Census, and Treasury for official US labor, price, output, demographic, and fiscal data.
+   - DHS/OHSS for official US immigration yearbook tables.
    - World Bank for global annual indicators.
 2. Specialist market APIs where official sources do not fit:
    - CoinGecko for crypto prices.
@@ -56,6 +57,19 @@ The housing affordability derived chart is:
 - Sources: FRED Case-Shiller national home price index, 30-year fixed mortgage rate, and average hourly earnings.
 - Transform: estimate 30-year mortgage payment pressure, compare against wages, and index to the first shared year.
 - Limitation: excludes taxes, insurance, down payments, credit constraints, and local market differences.
+
+## Search Intelligence
+
+The scalable search layer lives in `lib/query-intelligence.ts`. It ranks catalog entries by exact examples, intent patterns, aliases, synonym groups, and query-term coverage, then hands the best confident match to the planner and live-data layer.
+
+This means new sources should be added once to `lib/data-catalog.ts` with strong examples, aliases, patterns, limitations, and adapter metadata. The rest of the app should route through the intelligence layer instead of adding one-off branches for every phrasing.
+
+Current example:
+
+- Query: `how many immigrants have come to the United States in the past 20 years`
+- Catalog match: DHS/OHSS lawful permanent resident admissions.
+- Adapter: `dhs_immigration`
+- Limitation: this counts lawful permanent resident status grants, not every border crossing, visa, asylum claim, or temporary stay.
 
 ## Partial Answers
 

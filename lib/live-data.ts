@@ -1,9 +1,11 @@
 import type { ChartSpec } from "@/types/chart";
 import { catalogEntryForAdapter, resolveSupportedCatalogEntry } from "./data-catalog";
 import { housingAffordabilitySpecForQuery } from "./housing-affordability-data";
+import { immigrationSpecForQuery } from "./immigration-data";
 import { livingCostsSpecForQuery } from "./living-cost-data";
 import { getMacroSpec, macroWindowForQuery } from "./macro-data";
 import { normalizeSpec } from "./chart-utils";
+import { bestSupportedCatalogMatch } from "./query-intelligence";
 import { getWorldBankSpec, worldBankWindowForQuery } from "./world-bank-data";
 
 const colors = ["#c0392b", "#2980b9", "#16a085"];
@@ -29,7 +31,7 @@ type TreasuryDebtResponse = {
 };
 
 export async function liveSpecForQuery(query: string): Promise<ChartSpec | null> {
-  const entry = resolveSupportedCatalogEntry(query);
+  const entry = resolveSupportedCatalogEntry(query) ?? bestSupportedCatalogMatch(query)?.entry;
   if (!entry) return null;
 
   const lower = query.toLowerCase();
@@ -44,6 +46,10 @@ export async function liveSpecForQuery(query: string): Promise<ChartSpec | null>
 
   if (entry.adapter === "worldbank" && entry.adapterKey) {
     return getWorldBankSpec(entry.adapterKey, worldBankWindowForQuery(query));
+  }
+
+  if (entry.adapter === "dhs_immigration") {
+    return immigrationSpecForQuery(query);
   }
 
   if (entry.adapter === "coingecko") {

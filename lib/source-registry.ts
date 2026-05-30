@@ -4,16 +4,18 @@ import {
   supportedCatalogEntries,
   supportedPrompts
 } from "./data-catalog";
+import { bestSupportedCatalogMatch } from "./query-intelligence";
 
 const DEFAULT_PROMPTS = [
   "US inflation rate since 2020",
   "Bitcoin vs Ethereum live over the last 30 days",
+  "how many immigrants have come to the United States in the past 20 years",
   "life expectancy in the US vs Japan since 1960",
   "US national debt live last 30 days"
 ];
 
 export function supportedSourceForQuery(query: string) {
-  return resolveSupportedCatalogEntry(query);
+  return resolveSupportedCatalogEntry(query) ?? bestSupportedCatalogMatch(query)?.entry ?? null;
 }
 
 export function isSupportedQuery(query: string) {
@@ -79,6 +81,7 @@ function freshnessForProvider(provider: string) {
   if (provider === "coingecko") return "Fetched from CoinGecko market chart data and cached briefly.";
   if (provider === "worldbank") return "Fetched from World Bank indicator data and cached daily.";
   if (provider === "treasury") return "Fetched from Treasury Fiscal Data and cached hourly.";
+  if (provider === "dhs") return "Fetched from DHS/OHSS Yearbook immigration data and cached daily.";
   if (provider === "college_scorecard") return "Planned College Scorecard adapter.";
   return "Cataloged for a future source adapter.";
 }

@@ -5,6 +5,7 @@ const DATA_SOURCES = new Set<DataSource>([
   "live_treasury",
   "live_fred",
   "live_worldbank",
+  "live_dhs",
   "live_coingecko",
   "csv_upload",
   "training",

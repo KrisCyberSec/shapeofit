@@ -7,6 +7,7 @@ const BADGE_CONFIG: Record<
   live_treasury: { label: "LIVE - TREASURY", color: "#16a085", dot: true },
   live_fred: { label: "LIVE - FRED", color: "#16a085", dot: true },
   live_worldbank: { label: "LIVE - WORLD BANK", color: "#16a085", dot: true },
+  live_dhs: { label: "LIVE - DHS", color: "#16a085", dot: true },
   live_coingecko: { label: "LIVE - COINGECKO", color: "#16a085", dot: true },
   csv_upload: { label: "UPLOADED DATA", color: "#2980b9", dot: false },
   training: { label: "HISTORICAL EST.", color: "#d4ac0d", dot: false },
