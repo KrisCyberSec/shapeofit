@@ -1,4 +1,5 @@
 import type { ChartSpec } from "@/types/chart";
+import { catalogEntryForAdapter, resolveSupportedCatalogEntry } from "./data-catalog";
 import { normalizeSpec } from "./chart-utils";
 
 const colors = ["#c0392b", "#2980b9", "#16a085"];
@@ -31,8 +32,9 @@ export async function worldBankSpecForQuery(query: string): Promise<ChartSpec | 
   const metric = worldBankMetricForQuery(query);
   if (!metric) return null;
 
-  const window = windowForQuery(query);
+  const window = worldBankWindowForQuery(query);
   if (metric === "life_expectancy") return lifeExpectancySpec(window);
+  if (metric === "life_expectancy_us") return usLifeExpectancySpec(window);
   if (metric === "urban_population") return urbanPopulationSpec(window);
   if (metric === "largest_population") return largestCountriesSpec();
   return worldPopulationSpec(window);
@@ -40,6 +42,7 @@ export async function worldBankSpecForQuery(query: string): Promise<ChartSpec | 
 
 export async function getWorldBankSpec(metric: string, window: YearWindow = { startYear: 1960 }) {
   if (metric === "life_expectancy") return lifeExpectancySpec(window);
+  if (metric === "life_expectancy_us") return usLifeExpectancySpec(window);
   if (metric === "urban_population") return urbanPopulationSpec(window);
   if (metric === "largest_population") return largestCountriesSpec();
   if (metric === "world_population") return worldPopulationSpec(window);
@@ -48,6 +51,7 @@ export async function getWorldBankSpec(metric: string, window: YearWindow = { st
 
 async function worldPopulationSpec(window: YearWindow): Promise<ChartSpec> {
   const { meta, rows } = await fetchIndicator("WLD", "SP.POP.TOTL");
+  const catalogEntry = catalogEntryForAdapter("worldbank", "world_population");
   const data = sampleRows(filterWindow(rows, window), 14).map((row) => ({
     year: row.date,
     population: Number((Number(row.value) / 1_000_000_000).toFixed(2))
@@ -67,6 +71,8 @@ async function worldPopulationSpec(window: YearWindow): Promise<ChartSpec> {
     source: "Live World Bank indicator data, series SP.POP.TOTL.",
     sourceUrl: "https://data.worldbank.org/indicator/SP.POP.TOTL",
     sourceUpdatedAt: meta.lastupdated,
+    sourceCadence: catalogEntry?.cadence,
+    seriesIds: catalogEntry?.seriesIds,
     assumptions: [
       "Population is converted from people to billions.",
       "World Bank annual indicators can lag the current calendar year.",
@@ -87,6 +93,7 @@ async function worldPopulationSpec(window: YearWindow): Promise<ChartSpec> {
 
 async function urbanPopulationSpec(window: YearWindow): Promise<ChartSpec> {
   const { meta, rows } = await fetchIndicator("WLD", "SP.URB.TOTL.IN.ZS");
+  const catalogEntry = catalogEntryForAdapter("worldbank", "urban_population");
   const data = sampleRows(filterWindow(rows, window), 14).map((row) => ({
     year: row.date,
     urban_share: Number(Number(row.value).toFixed(1))
@@ -106,6 +113,8 @@ async function urbanPopulationSpec(window: YearWindow): Promise<ChartSpec> {
     source: "Live World Bank indicator data, series SP.URB.TOTL.IN.ZS.",
     sourceUrl: "https://data.worldbank.org/indicator/SP.URB.TOTL.IN.ZS",
     sourceUpdatedAt: meta.lastupdated,
+    sourceCadence: catalogEntry?.cadence,
+    seriesIds: catalogEntry?.seriesIds,
     assumptions: [
       "Urban population share is reported annually by World Bank.",
       "Urban definitions vary by country and are harmonized by the source.",
@@ -126,6 +135,7 @@ async function urbanPopulationSpec(window: YearWindow): Promise<ChartSpec> {
 
 async function lifeExpectancySpec(window: YearWindow): Promise<ChartSpec> {
   const { meta, rows } = await fetchIndicator("USA;JPN", "SP.DYN.LE00.IN");
+  const catalogEntry = catalogEntryForAdapter("worldbank", "life_expectancy");
   const byYear = new Map<string, Record<string, string | number>>();
 
   filterWindow(rows, window).forEach((row) => {
@@ -156,6 +166,8 @@ async function lifeExpectancySpec(window: YearWindow): Promise<ChartSpec> {
     source: "Live World Bank indicator data, series SP.DYN.LE00.IN.",
     sourceUrl: "https://data.worldbank.org/indicator/SP.DYN.LE00.IN",
     sourceUpdatedAt: meta.lastupdated,
+    sourceCadence: catalogEntry?.cadence,
+    seriesIds: catalogEntry?.seriesIds,
     assumptions: [
       "Life expectancy is reported annually and can lag current-year conditions.",
       "The chart compares national averages, not subgroups.",
@@ -174,8 +186,58 @@ async function lifeExpectancySpec(window: YearWindow): Promise<ChartSpec> {
   });
 }
 
+async function usLifeExpectancySpec(window: YearWindow): Promise<ChartSpec> {
+  const { meta, rows } = await fetchIndicator("USA", "SP.DYN.LE00.IN");
+  const catalogEntry = catalogEntryForAdapter("worldbank", "life_expectancy_us");
+  const data = sampleRows(filterWindow(rows, window), 14).map((row) => ({
+    year: row.date,
+    life_expectancy: Number(Number(row.value).toFixed(1))
+  }));
+
+  if (!data.length) throw new Error("World Bank returned no US life expectancy rows");
+
+  const first = data[0];
+  const latest = data.at(-1) ?? first;
+  const startNote =
+    String(first.year) !== String(window.startYear)
+      ? ` The source series begins in ${first.year}, so the visible chart starts there.`
+      : "";
+
+  return normalizeSpec({
+    title: "US Life Expectancy",
+    subtitle: `Life expectancy at birth in years, shown from ${first.year}${window.endYear ? ` to ${latest.year}` : " to latest available"}.${startNote}`,
+    chartType: "line",
+    data,
+    xKey: "year",
+    yKeys: ["life_expectancy"],
+    colors: [colors[0]],
+    unit: "years",
+    source: "Live World Bank indicator data, series SP.DYN.LE00.IN.",
+    sourceUrl: "https://data.worldbank.org/indicator/SP.DYN.LE00.IN",
+    sourceUpdatedAt: meta.lastupdated,
+    sourceCadence: catalogEntry?.cadence,
+    seriesIds: catalogEntry?.seriesIds,
+    assumptions: [
+      "Life expectancy is reported annually and can lag current-year conditions.",
+      "World Bank annual life expectancy data starts in 1960 for this indicator.",
+      "The chart samples long windows to keep the trend readable."
+    ],
+    insight: `US life expectancy changed by about ${(latest.life_expectancy - first.life_expectancy).toFixed(1)} years across this window.`,
+    whyItMatters:
+      "Life expectancy is a broad national health measure, best read as a long-run trend rather than a single-cause explanation.",
+    dataSource: "live_worldbank",
+    seriesLabels: ["United States"],
+    followUpPrompts: [
+      "life expectancy in the US vs Japan since 1960",
+      "world population growth 1960 to 2024",
+      "urban population share since 1960"
+    ]
+  });
+}
+
 async function largestCountriesSpec(): Promise<ChartSpec> {
   const { meta, rows } = await fetchIndicator(TOP_POPULATION_COUNTRIES, "SP.POP.TOTL");
+  const catalogEntry = catalogEntryForAdapter("worldbank", "largest_population");
   const latestByCountry = new Map<string, WorldBankRow>();
 
   rows
@@ -208,6 +270,8 @@ async function largestCountriesSpec(): Promise<ChartSpec> {
     source: "Live World Bank indicator data, series SP.POP.TOTL.",
     sourceUrl: "https://data.worldbank.org/indicator/SP.POP.TOTL",
     sourceUpdatedAt: meta.lastupdated,
+    sourceCadence: catalogEntry?.cadence,
+    seriesIds: catalogEntry?.seriesIds,
     assumptions: [
       "Uses a curated set of the world's most populous countries, then sorts by latest available population.",
       "Population values are converted from people to billions.",
@@ -227,18 +291,8 @@ async function largestCountriesSpec(): Promise<ChartSpec> {
 }
 
 function worldBankMetricForQuery(query: string) {
-  const lower = query.toLowerCase();
-
-  if (lower.includes("largest") && lower.includes("population")) return "largest_population";
-  if (lower.includes("urban") && lower.includes("population")) return "urban_population";
-  if (lower.includes("life expectancy") && (lower.includes("japan") || lower.includes("us"))) {
-    return "life_expectancy";
-  }
-  if (lower.includes("world population") || lower.includes("population growth")) {
-    return "world_population";
-  }
-
-  return null;
+  const entry = resolveSupportedCatalogEntry(query);
+  return entry?.adapter === "worldbank" ? entry.adapterKey ?? null : null;
 }
 
 async function fetchIndicator(countryCodes: string, indicator: string) {
@@ -270,7 +324,7 @@ function filterWindow(rows: WorldBankRow[], window: YearWindow) {
     .sort((a, b) => Number(a.date) - Number(b.date));
 }
 
-function windowForQuery(query: string): YearWindow {
+export function worldBankWindowForQuery(query: string): YearWindow {
   const lower = query.toLowerCase();
   const range = lower.match(/(?:since|from)?\s*(20\d{2}|19\d{2})(?:\s*(?:to|-)\s*(20\d{2}|19\d{2}))?/);
   if (range) {

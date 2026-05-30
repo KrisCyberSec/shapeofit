@@ -20,6 +20,14 @@ export interface ChartPointSelection {
   row: Record<string, string | number>;
 }
 
+export interface ReferenceContext {
+  provider: "grokipedia";
+  label: string;
+  summary: string;
+  url?: string;
+  confidence: "context_only";
+}
+
 export interface ChartSpec {
   title: string;
   subtitle: string;
@@ -33,6 +41,9 @@ export interface ChartSpec {
   source: string;
   sourceUrl?: string;
   sourceUpdatedAt?: string;
+  sourceCadence?: string;
+  sourceTransform?: string;
+  seriesIds?: string[];
   assumptions?: string[];
   insight: string;
   whyItMatters?: string;
@@ -40,6 +51,7 @@ export interface ChartSpec {
   annotations?: ChartAnnotation[];
   followUpPrompts?: string[];
   seriesLabels?: string[];
+  referenceContext?: ReferenceContext;
 }
 
 export interface ClarificationOption {
@@ -53,7 +65,14 @@ export interface ClarificationResponse {
   options: ClarificationOption[];
 }
 
-export type ChartResponse = ChartSpec | ClarificationResponse;
+export interface UnsupportedQueryResponse {
+  unsupported: true;
+  query: string;
+  message: string;
+  supportedPrompts: string[];
+}
+
+export type ChartResponse = ChartSpec | ClarificationResponse | UnsupportedQueryResponse;
 
 export interface DailyStory {
   date: string;

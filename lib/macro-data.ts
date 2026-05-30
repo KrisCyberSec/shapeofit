@@ -1,4 +1,5 @@
 import type { ChartSpec } from "@/types/chart";
+import { catalogEntryForAdapter, resolveSupportedCatalogEntry } from "./data-catalog";
 import { normalizeSpec } from "./chart-utils";
 
 const colors = ["#c0392b", "#2980b9", "#16a085"];
@@ -17,7 +18,7 @@ type MacroMetric = {
   followUpPrompts: string[];
 };
 
-type FredRow = {
+export type FredRow = {
   date: string;
   value: number;
 };
@@ -197,6 +198,26 @@ const MACRO_METRICS: MacroMetric[] = [
       "rent vs wages since 2000",
       "US inflation rate since 2020"
     ]
+  },
+  {
+    key: "rent",
+    seriesId: "CUSR0000SEHA",
+    label: "Rent CPI",
+    title: "US Rent Pressure",
+    subtitle: "Rent of primary residence CPI for US city average.",
+    unit: "index",
+    yKey: "rent",
+    whyItMatters: "",
+    assumptions: [
+      "Index values show movement, not dollar rent.",
+      "The series tracks rent of primary residence for US city average.",
+      "Local rents can differ materially from the national index."
+    ],
+    followUpPrompts: [
+      "rent vs wages since 2000",
+      "home prices since 2000",
+      "US inflation rate since 2020"
+    ]
   }
 ];
 
@@ -207,7 +228,7 @@ export function isMacroQuery(query: string) {
 export async function macroSpecForQuery(query: string): Promise<ChartSpec | null> {
   const metric = metricForQuery(query);
   if (!metric) return null;
-  return getMacroSpec(metric.key, windowForQuery(query));
+  return getMacroSpec(metric.key, macroWindowForQuery(query));
 }
 
 export async function getMacroSpec(
@@ -216,6 +237,7 @@ export async function getMacroSpec(
 ): Promise<ChartSpec> {
   const metric = MACRO_METRICS.find((item) => item.key === metricKey);
   if (!metric) throw new Error(`Unsupported macro metric: ${metricKey}`);
+  const catalogEntry = catalogEntryForAdapter("fred", metric.key);
 
   const rawRows = await fetchFredRows(metric.seriesId);
   const transformed = metric.transform === "yoy_percent" ? toYearOverYear(rawRows) : rawRows;
@@ -246,6 +268,9 @@ export async function getMacroSpec(
     source: `Live FRED graph data, series ${metric.seriesId}.`,
     sourceUrl: `https://fred.stlouisfed.org/series/${metric.seriesId}`,
     sourceUpdatedAt: latest.date,
+    sourceCadence: catalogEntry?.cadence,
+    sourceTransform: catalogEntry?.transform,
+    seriesIds: catalogEntry?.seriesIds ?? [metric.seriesId],
     assumptions: metric.assumptions,
     insight: `${metric.label} ${change >= 0 ? "rose" : "fell"} by about ${formatChange(Math.abs(change), metric.unit)} across this window.`,
     whyItMatters: metric.whyItMatters,
@@ -256,40 +281,12 @@ export async function getMacroSpec(
 }
 
 function metricForQuery(query: string) {
-  const lower = query.toLowerCase();
-
-  if (lower.includes("rent") && (lower.includes("wage") || lower.includes("pay"))) {
-    return null;
-  }
-  if (lower.includes("food") && (lower.includes("inflation") || lower.includes("price"))) {
-    return MACRO_METRICS.find((item) => item.key === "food_inflation");
-  }
-  if (lower.includes("inflation") || lower.includes("cpi")) {
-    return MACRO_METRICS.find((item) => item.key === "inflation");
-  }
-  if (lower.includes("mortgage")) {
-    return MACRO_METRICS.find((item) => item.key === "mortgage");
-  }
-  if (lower.includes("unemployment") || lower.includes("jobless")) {
-    return MACRO_METRICS.find((item) => item.key === "unemployment");
-  }
-  if (lower.includes("fed funds") || lower.includes("federal funds") || lower.includes("interest rate")) {
-    return MACRO_METRICS.find((item) => item.key === "fed_funds");
-  }
-  if (lower.includes("gas") || lower.includes("gasoline")) {
-    return MACRO_METRICS.find((item) => item.key === "gas");
-  }
-  if (lower.includes("wages") || lower.includes("hourly earnings") || lower.includes("pay")) {
-    return MACRO_METRICS.find((item) => item.key === "wages");
-  }
-  if (lower.includes("home price") || lower.includes("house price")) {
-    return MACRO_METRICS.find((item) => item.key === "home_prices");
-  }
-
-  return null;
+  const entry = resolveSupportedCatalogEntry(query);
+  if (entry?.adapter !== "fred" || !entry.adapterKey) return null;
+  return MACRO_METRICS.find((item) => item.key === entry.adapterKey) ?? null;
 }
 
-function windowForQuery(query: string) {
+export function macroWindowForQuery(query: string) {
   const lower = query.toLowerCase();
   const range = lower.match(/(?:since|from)?\s*(20\d{2}|19\d{2})(?:\s*(?:to|-)\s*(20\d{2}|19\d{2}))?/);
   if (range) {
@@ -301,7 +298,7 @@ function windowForQuery(query: string) {
   return { startYear: lower.includes("last decade") ? new Date().getFullYear() - 10 : 2015 };
 }
 
-async function fetchFredRows(seriesId: string) {
+export async function fetchFredRows(seriesId: string) {
   const endpoint = new URL("https://fred.stlouisfed.org/graph/fredgraph.csv");
   endpoint.searchParams.set("id", seriesId);
 

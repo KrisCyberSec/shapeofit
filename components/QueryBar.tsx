@@ -22,14 +22,18 @@ export function QueryBar({
   onSubmit: (query: string) => void;
 }) {
   const [value, setValue] = useState("");
+  const [focused, setFocused] = useState(false);
 
   const matches = useMemo(() => {
     const query = value.trim().toLowerCase();
-    if (query.length < 3) return [];
-    return suggestions
-      .filter((item) => item.prompt.toLowerCase().includes(query))
-      .slice(0, 6);
+    const pool =
+      query.length < 3
+        ? featuredSuggestions(suggestions)
+        : suggestions.filter((item) => item.prompt.toLowerCase().includes(query));
+
+    return pool.slice(0, 6);
   }, [suggestions, value]);
+  const showSuggestions = focused && matches.length > 0;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -49,10 +53,13 @@ export function QueryBar({
           className="min-w-0 flex-1 bg-transparent px-4 text-base text-ink outline-none placeholder:text-ink3 md:text-lg"
           value={value}
           onChange={(event) => setValue(event.target.value)}
+          onFocus={() => setFocused(true)}
+          onMouseDown={() => setFocused(true)}
+          onBlur={() => window.setTimeout(() => setFocused(false), 120)}
           placeholder={placeholder}
         />
         <button
-          className="flex min-w-32 items-center justify-center gap-2 bg-ink px-4 font-mono text-xs uppercase text-paper transition hover:bg-accent disabled:cursor-wait disabled:bg-ink3"
+          className="flex min-w-24 items-center justify-center gap-2 bg-ink px-3 font-mono text-[11px] uppercase text-paper transition hover:bg-accent disabled:cursor-wait disabled:bg-ink3 md:min-w-32 md:px-4 md:text-xs"
           type="submit"
           disabled={loading}
         >
@@ -61,24 +68,44 @@ export function QueryBar({
         </button>
       </div>
 
-      {matches.length > 0 ? (
-        <div className="absolute z-20 mt-1 w-full border border-rule bg-paper">
+      {showSuggestions ? (
+        <div className="absolute z-20 mt-1 w-full border border-ink bg-paper shadow-[6px_6px_0_var(--rule)]">
+          <div className="flex items-center justify-between border-b border-rule2 px-4 py-2">
+            <span className="font-mono text-[10px] uppercase text-accent">
+              {value.trim().length < 3 ? "Source-backed starters" : "Matching sources"}
+            </span>
+            <span className="font-mono text-[10px] uppercase text-ink3">
+              {matches.length} shown
+            </span>
+          </div>
           {matches.map((item) => (
             <button
               key={item.prompt}
               type="button"
-              className="flex w-full items-center justify-between gap-4 border-b border-rule2 px-4 py-3 text-left last:border-b-0 hover:bg-rule2"
+              className="group flex w-full items-center justify-between gap-4 border-b border-rule2 px-4 py-3 text-left last:border-b-0 hover:bg-ink hover:text-paper"
               onClick={() => {
                 onSubmit(item.prompt);
                 setValue("");
+                setFocused(false);
               }}
             >
-              <span className="text-sm text-ink">{item.prompt}</span>
-              <span className="font-mono text-[10px] uppercase text-accent">{item.category}</span>
+              <span className="text-sm text-ink group-hover:text-paper">{item.prompt}</span>
+              <span className="shrink-0 font-mono text-[10px] uppercase text-accent group-hover:text-paper">
+                {item.category}
+              </span>
             </button>
           ))}
         </div>
       ) : null}
     </form>
   );
+}
+
+function featuredSuggestions(suggestions: PromptSuggestion[]) {
+  const seen = new Set<string>();
+  return suggestions.filter((item) => {
+    if (seen.has(item.category)) return false;
+    seen.add(item.category);
+    return true;
+  });
 }

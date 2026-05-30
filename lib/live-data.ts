@@ -1,7 +1,10 @@
 import type { ChartSpec } from "@/types/chart";
-import { macroSpecForQuery } from "./macro-data";
+import { catalogEntryForAdapter, resolveSupportedCatalogEntry } from "./data-catalog";
+import { housingAffordabilitySpecForQuery } from "./housing-affordability-data";
+import { livingCostsSpecForQuery } from "./living-cost-data";
+import { getMacroSpec, macroWindowForQuery } from "./macro-data";
 import { normalizeSpec } from "./chart-utils";
-import { worldBankSpecForQuery } from "./world-bank-data";
+import { getWorldBankSpec, worldBankWindowForQuery } from "./world-bank-data";
 
 const colors = ["#c0392b", "#2980b9", "#16a085"];
 
@@ -26,28 +29,40 @@ type TreasuryDebtResponse = {
 };
 
 export async function liveSpecForQuery(query: string): Promise<ChartSpec | null> {
+  const entry = resolveSupportedCatalogEntry(query);
+  if (!entry) return null;
+
   const lower = query.toLowerCase();
 
-  if (isTreasuryDebtQuery(lower)) {
+  if (entry.adapter === "treasury") {
     return getTreasuryDebtSpec();
   }
 
-  const macroSpec = await macroSpecForQuery(query);
-  if (macroSpec) return macroSpec;
+  if (entry.adapter === "fred" && entry.adapterKey) {
+    return getMacroSpec(entry.adapterKey, macroWindowForQuery(query));
+  }
 
-  const worldBankSpec = await worldBankSpecForQuery(query);
-  if (worldBankSpec) return worldBankSpec;
+  if (entry.adapter === "worldbank" && entry.adapterKey) {
+    return getWorldBankSpec(entry.adapterKey, worldBankWindowForQuery(query));
+  }
 
-  if (isCryptoQuery(lower)) {
-    const coins = coinsForQuery(lower);
-    const days = daysForQuery(lower);
-    return getCryptoPriceSpec(coins, days);
+  if (entry.adapter === "coingecko") {
+    return getCryptoPriceSpec(coinsForQuery(lower), daysForQuery(lower));
+  }
+
+  if (entry.adapter === "living_costs") {
+    return livingCostsSpecForQuery(query);
+  }
+
+  if (entry.adapter === "housing_affordability") {
+    return housingAffordabilitySpecForQuery(query);
   }
 
   return null;
 }
 
 export async function getCryptoPriceSpec(coins: Coin[] = [COINS[0]], days = 30): Promise<ChartSpec> {
+  const catalogEntry = catalogEntryForAdapter("coingecko", "crypto_prices");
   const safeDays = Math.min(Math.max(Math.round(days), 1), 365);
   const series = await Promise.all(coins.slice(0, 3).map((coin) => getCoinPrices(coin, safeDays)));
   const data = buildCryptoRows(series);
@@ -68,6 +83,8 @@ export async function getCryptoPriceSpec(coins: Coin[] = [COINS[0]], days = 30):
     source: "Live CoinGecko market chart API, refreshed by the app route.",
     sourceUrl: "https://docs.coingecko.com/reference/coins-id-market-chart",
     sourceUpdatedAt: new Date().toISOString().slice(0, 10),
+    sourceCadence: catalogEntry?.cadence,
+    seriesIds: series.map((item) => item.coin.id),
     assumptions: [
       multiSeries
         ? "Multiple coins are indexed to the first shared point so movement can be compared."
@@ -89,6 +106,7 @@ export async function getCryptoPriceSpec(coins: Coin[] = [COINS[0]], days = 30):
 }
 
 export async function getTreasuryDebtSpec(limit = 30): Promise<ChartSpec> {
+  const catalogEntry = catalogEntryForAdapter("treasury", "debt_to_penny");
   const pageSize = Math.min(Math.max(Math.round(limit), 5), 90);
   const endpoint = new URL(
     "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny"
@@ -127,6 +145,8 @@ export async function getTreasuryDebtSpec(limit = 30): Promise<ChartSpec> {
     source: "Live U.S. Treasury Fiscal Data API: Debt to the Penny.",
     sourceUrl: "https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/",
     sourceUpdatedAt: latestDate(rows),
+    sourceCadence: catalogEntry?.cadence,
+    seriesIds: catalogEntry?.seriesIds,
     assumptions: [
       "Values are converted from dollars to trillions of dollars.",
       "The latest rows are sorted by Treasury record date.",
@@ -143,22 +163,6 @@ export async function getTreasuryDebtSpec(limit = 30): Promise<ChartSpec> {
       "US inflation rate 2015 to 2024"
     ]
   });
-}
-
-function isCryptoQuery(lower: string) {
-  return (
-    lower.includes("crypto") ||
-    COINS.some((coin) => coin.aliases.some((alias) => lower.includes(alias)))
-  );
-}
-
-function isTreasuryDebtQuery(lower: string) {
-  return (
-    lower.includes("national debt") ||
-    lower.includes("public debt") ||
-    lower.includes("treasury debt") ||
-    lower.includes("debt to the penny")
-  );
 }
 
 function coinsForQuery(lower: string) {

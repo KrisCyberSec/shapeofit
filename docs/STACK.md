@@ -1,12 +1,12 @@
 # Stack Direction
 
-ShapeOfIt is intended to become a real product, not just a static demo. The preferred long-term stack is:
+Shape Of It is intended to become a real product, not just a static demo. The preferred long-term stack is:
 
 - **App hosting:** Vercel
 - **DNS and security edge:** Cloudflare
 - **Framework:** Standard Next.js App Router route handlers
-- **Current host:** Vercel at `https://chartquery.vercel.app`
-- **Target production domain:** `shapeofit.app`
+- **Production domain:** `https://shapeofit.app`
+- **Vercel fallback domain:** `https://chartquery.vercel.app`
 
 ## Why This Direction
 
@@ -22,26 +22,46 @@ Cloudflare should sit in front of the production domain for DNS and edge securit
 - Use external product infrastructure for core data, auth, and payments when possible.
 - Keep environment variables platform-neutral.
 
-## Production Cutover Plan
+## Current Production State
 
-1. Buy `shapeofit.app`.
-2. Add `shapeofit.app` to the Vercel project and make it primary.
-3. Manage the domain in Cloudflare DNS and point it to Vercel using Vercel's domain instructions.
-4. Enable Cloudflare proxy once Vercel verifies the domain.
-5. Set or update Vercel environment variables:
+- `shapeofit.app` is attached to the Vercel project.
+- `www.shapeofit.app` is attached to the Vercel project.
+- Cloudflare manages DNS for the domain.
+- The Vercel project deploys from GitHub `main`.
+- Cloudflare DNS currently points the apex and `www` records at Vercel.
+
+## Security Edge Plan
+
+1. Keep Cloudflare as DNS authority for `shapeofit.app`.
+2. Enable Cloudflare proxy once the Vercel domain state remains healthy with the proxied records.
+3. Set or update Vercel environment variables:
    - `NEXT_PUBLIC_SITE_URL`
    - `ANTHROPIC_API_KEY` when Claude generation should be live
-6. Configure Cloudflare security rules:
+4. Configure Cloudflare security rules:
    - Managed WAF rules
    - Rate limits for `/api/chart`, `/api/live/*`, and future auth endpoints
    - Turnstile for signup, login, and any high-cost AI generation flow
    - Bot protections that do not block normal search/social preview crawlers
-7. Verify:
+5. Verify:
    - `/`
    - `/api/health`
    - `/api/chart`
    - `/opengraph-image`
 
-## Current Repo State
+## Product Infrastructure Phasing
 
-The Vercel project is connected to GitHub and deploys from `main`. Until `shapeofit.app` is purchased and configured, the working production URL remains `https://chartquery.vercel.app`.
+Current MVP infrastructure:
+
+- Vercel hosting
+- Cloudflare DNS
+- Standard Next.js route handlers
+- Public live-data routes
+- Local browser storage for history and notes
+
+Planned product infrastructure:
+
+- Cloudflare WAF, rate limiting, bot controls, and Turnstile
+- Account-backed saved charts
+- Payment-backed Pro tier
+- Database persistence for history, collections, shared charts, and annotations
+- Analytics for query/category demand

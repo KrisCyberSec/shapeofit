@@ -26,7 +26,7 @@ export function ChartHeader({
   return (
     <div className="flex flex-col gap-5 border-b border-rule pb-5 lg:flex-row lg:items-start lg:justify-between">
       <div className="max-w-2xl">
-        <h2 className="font-display text-4xl leading-none text-ink md:text-5xl">
+        <h2 className="font-display text-4xl leading-none text-ink md:text-6xl">
           {spec.title}
         </h2>
         <p className="mt-3 max-w-xl text-base leading-7 text-ink2">{spec.subtitle}</p>
@@ -63,19 +63,24 @@ export function ChartHeader({
             {exportStatus === "saved" ? "Saved" : exportStatus === "failed" ? "Failed" : "PNG"}
           </button>
         </div>
-        <div className="grid grid-cols-4 overflow-hidden border border-rule bg-paper">
-          {CHART_TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              className={`h-9 min-w-16 px-3 font-mono text-[11px] uppercase ${
-                chartType === type ? "bg-ink text-paper" : "text-ink2 hover:bg-rule2"
-              }`}
-              onClick={() => onChartTypeChange(type)}
-            >
-              {type}
-            </button>
-          ))}
+        <div className="flex flex-col gap-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink3 lg:text-right">
+            View
+          </p>
+          <div className="grid grid-cols-4 overflow-hidden border border-rule bg-paper">
+            {CHART_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                className={`h-9 min-w-16 px-3 font-mono text-[11px] uppercase ${
+                  chartType === type ? "bg-ink text-paper" : "text-ink2 hover:bg-rule2"
+                }`}
+                onClick={() => onChartTypeChange(type)}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

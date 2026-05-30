@@ -70,3 +70,17 @@ button {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes loadingBar {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  50% {
+    transform: translateX(60%);
+  }
+
+  100% {
+    transform: translateX(220%);
+  }
+}

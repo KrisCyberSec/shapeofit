@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Scatter,
@@ -51,42 +52,73 @@ export function ChartRenderer({
     onPointSelect?.({ xValue, row });
   }
 
+  const selectedRow =
+    typeof selectedXValue === "undefined" || selectedXValue === null
+      ? null
+      : spec.data.find((row) => row[spec.xKey] === selectedXValue);
+  const selectedMarkerX =
+    typeof selectedXValue === "undefined" || selectedXValue === null ? undefined : selectedXValue;
+  const selectedMarkers = selectedRow
+    ? spec.yKeys.map((key, index) => (
+        <ReferenceDot
+          key={`${key}-${String(selectedXValue)}`}
+          x={selectedMarkerX}
+          y={Number(selectedRow[key])}
+          r={6}
+          fill={spec.colors[index]}
+          stroke="#faf8f4"
+          strokeWidth={2}
+          ifOverflow="extendDomain"
+        />
+      ))
+    : null;
+  const yDomain = yAxisDomain(spec, chartType);
+
   const common = {
     data: spec.data,
-    margin: { top: 18, right: 12, bottom: 8, left: 0 },
+    margin: { top: 22, right: 24, bottom: 28, left: 10 },
     onClick: handleChartClick
   };
 
-  const axes = (
-    <>
-      <CartesianGrid stroke="#ddd9d0" strokeDasharray="3 3" vertical={false} />
-      <XAxis
-        dataKey={spec.xKey}
-        tick={{ fill: "#4a4640", fontSize: 12 }}
-        tickLine={false}
-        axisLine={{ stroke: "#ddd9d0" }}
-      />
-      <YAxis
-        tick={{ fill: "#4a4640", fontSize: 12 }}
-        tickLine={false}
-        axisLine={false}
-        tickFormatter={(value) => compactNumber(Number(value))}
-        width={54}
-      />
-      <Tooltip content={<ChartTooltip spec={spec} />} />
-      {typeof selectedXValue !== "undefined" && selectedXValue !== null ? (
+  const axes = [
+    <CartesianGrid key="grid" stroke="#ddd9d0" strokeDasharray="3 5" vertical={false} />,
+    <XAxis
+      key="x-axis"
+      dataKey={spec.xKey}
+      height={40}
+      interval="preserveStartEnd"
+      minTickGap={18}
+      tick={{ fill: "#1a1814", fontSize: 12, fontFamily: "DM Mono, monospace" }}
+      tickLine={{ stroke: "#8a8580" }}
+      tickMargin={10}
+      axisLine={{ stroke: "#8a8580" }}
+    />,
+    <YAxis
+      key="y-axis"
+      domain={yDomain}
+      tick={{ fill: "#1a1814", fontSize: 12, fontFamily: "DM Mono, monospace" }}
+      tickLine={{ stroke: "#8a8580" }}
+      tickMargin={8}
+      axisLine={{ stroke: "#8a8580" }}
+      tickFormatter={(value) => formatAxisTick(Number(value), spec.unit)}
+      tickCount={6}
+      width={72}
+    />,
+    <Tooltip key="tooltip" content={<ChartTooltip spec={spec} />} />,
+    typeof selectedXValue !== "undefined" && selectedXValue !== null ? (
         <ReferenceLine
+          key="selected-line"
           x={selectedXValue}
           stroke="#c0392b"
           strokeDasharray="4 3"
           ifOverflow="extendDomain"
         />
-      ) : null}
-    </>
-  );
+      ) : null,
+    ...(selectedMarkers ?? [])
+  ];
 
   return (
-    <div className="h-[280px] w-full cursor-crosshair md:h-[380px]">
+    <div className="h-[400px] w-full cursor-crosshair select-none md:h-[520px]">
       <ResponsiveContainer width="100%" height="100%">
         {chartType === "bar" ? (
           <BarChart {...common}>
@@ -97,6 +129,7 @@ export function ChartRenderer({
                 dataKey={key}
                 fill={spec.colors[index]}
                 radius={[2, 2, 0, 0]}
+                animationDuration={450}
                 isAnimationActive
               />
             ))}
@@ -111,8 +144,9 @@ export function ChartRenderer({
                 dataKey={key}
                 stroke={spec.colors[index]}
                 fill={spec.colors[index]}
-                fillOpacity={0.18}
-                strokeWidth={2}
+                fillOpacity={0.16}
+                strokeWidth={2.5}
+                animationDuration={450}
                 isAnimationActive
               />
             ))}
@@ -125,6 +159,7 @@ export function ChartRenderer({
                 key={key}
                 dataKey={key}
                 fill={spec.colors[index]}
+                animationDuration={450}
                 isAnimationActive
               />
             ))}
@@ -138,9 +173,12 @@ export function ChartRenderer({
                 type="monotone"
                 dataKey={key}
                 stroke={spec.colors[index]}
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: spec.colors[index], strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: spec.colors[index], stroke: "#faf8f4", strokeWidth: 2 }}
+                strokeWidth={3.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                dot={{ r: 2.4, fill: spec.colors[index], stroke: "#faf8f4", strokeWidth: 1 }}
+                activeDot={{ r: 7, fill: spec.colors[index], stroke: "#faf8f4", strokeWidth: 2.5 }}
+                animationDuration={450}
                 isAnimationActive
               />
             ))}
@@ -149,6 +187,37 @@ export function ChartRenderer({
       </ResponsiveContainer>
     </div>
   );
+}
+
+function yAxisDomain(spec: ChartSpec, chartType: ChartType): [number | "auto", number | "auto"] {
+  if (chartType === "bar") return [0, "auto"];
+
+  const values = spec.data
+    .flatMap((row) => spec.yKeys.map((key) => Number(row[key])))
+    .filter((value) => Number.isFinite(value));
+
+  if (!values.length) return ["auto", "auto"];
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min;
+  const padding = range > 0 ? range * 0.14 : Math.max(Math.abs(max) * 0.08, 1);
+  const lower = min >= 0 ? Math.max(0, min - padding) : min - padding;
+
+  return [roundAxisBoundary(lower), roundAxisBoundary(max + padding)];
+}
+
+function roundAxisBoundary(value: number) {
+  if (!Number.isFinite(value) || value === 0) return 0;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(value))) - 1);
+  return Number((Math.round(value / magnitude) * magnitude).toPrecision(12));
+}
+
+function formatAxisTick(value: number, unit: string) {
+  const formatted = compactNumber(value);
+  if (unit === "$") return `$${formatted}`;
+  if (unit === "%") return `${formatted}%`;
+  return formatted;
 }
 
 function ChartTooltip({
@@ -165,8 +234,8 @@ function ChartTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="border border-ink bg-ink px-3 py-2 text-paper">
-      <p className="font-mono text-[11px] uppercase text-rule">{label}</p>
+    <div className="border border-ink bg-paper px-3 py-2 text-ink shadow-[4px_4px_0_var(--rule)]">
+      <p className="font-mono text-[11px] uppercase text-accent">{label}</p>
       <div className="mt-2 space-y-1">
         {payload.map((item) => (
           <div key={item.dataKey} className="flex min-w-40 items-center justify-between gap-5">
@@ -174,7 +243,7 @@ function ChartTooltip({
               <span className="h-2 w-2" style={{ backgroundColor: item.color }} />
               {item.name ?? labelize(String(item.dataKey))}
             </span>
-            <span className="font-mono text-xs">
+            <span className="font-mono text-xs text-ink">
               {spec.unit === "$" ? "$" : ""}
               {compactNumber(Number(item.value))}
               {spec.unit && spec.unit !== "$" && spec.unit !== "index" ? ` ${spec.unit}` : ""}

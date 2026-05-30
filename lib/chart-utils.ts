@@ -11,7 +11,7 @@ const DATA_SOURCES = new Set<DataSource>([
   "approximate"
 ]);
 
-const DEFAULT_COLORS = ["#c0392b", "#2980b9", "#16a085"];
+const DEFAULT_COLORS = ["#c0392b", "#2980b9", "#16a085", "#8e44ad", "#d4ac0d"];
 
 export function isChartSpec(value: unknown): value is ChartSpec {
   if (!value || typeof value !== "object") return false;
@@ -27,7 +27,7 @@ export function isChartSpec(value: unknown): value is ChartSpec {
     typeof candidate.xKey === "string" &&
     Array.isArray(candidate.yKeys) &&
     candidate.yKeys.length > 0 &&
-    candidate.yKeys.length <= 3 &&
+    candidate.yKeys.length <= 5 &&
     typeof candidate.unit === "string" &&
     typeof candidate.source === "string" &&
     typeof candidate.insight === "string" &&
@@ -37,7 +37,7 @@ export function isChartSpec(value: unknown): value is ChartSpec {
 }
 
 export function normalizeSpec(spec: ChartSpec): ChartSpec {
-  const yKeys = spec.yKeys.slice(0, 3);
+  const yKeys = spec.yKeys.slice(0, 5);
 
   return {
     ...spec,
@@ -91,15 +91,20 @@ export function mergeComparison(base: ChartSpec, addition: ChartSpec): ChartSpec
   const additionKey = addition.yKeys[0];
   const nextKey = uniqueKey(additionKey, base.yKeys);
   const length = Math.min(base.data.length, addition.data.length);
+  const baseRows = base.data.slice(-length);
+  const additionRows = addition.data.slice(-length);
+  const baseStart = Number(baseRows[0]?.[baseKey]) || 1;
+  const additionStart = Number(additionRows[0]?.[additionKey]) || 1;
   const data = base.data.slice(-length).map((row, index) => ({
     ...row,
-    [nextKey]: Number(addition.data.slice(-length)[index]?.[additionKey])
+    [baseKey]: indexValue(Number(row[baseKey]), baseStart),
+    [nextKey]: indexValue(Number(additionRows[index]?.[additionKey]), additionStart)
   }));
 
   return normalizeSpec({
     ...base,
     title: `${base.seriesLabels?.[0] ?? base.title} vs ${addition.seriesLabels?.[0] ?? addition.title}`,
-    subtitle: "A side-by-side comparison generated from two plain-language questions.",
+    subtitle: "A side-by-side comparison indexed to 100 at the first shared point.",
     chartType: base.chartType === "bar" ? "line" : base.chartType,
     data,
     yKeys: [baseKey, nextKey].slice(0, 3),
@@ -108,7 +113,14 @@ export function mergeComparison(base: ChartSpec, addition: ChartSpec): ChartSpec
       base.seriesLabels?.[0] ?? base.title,
       addition.seriesLabels?.[0] ?? addition.title
     ],
-    insight: `${addition.seriesLabels?.[0] ?? addition.title} is now layered with ${base.seriesLabels?.[0] ?? base.title} so the patterns can be read together.`,
+    unit: "index",
+    source: mergeText(base.source, addition.source) ?? base.source,
+    sourceUrl: base.sourceUrl,
+    sourceUpdatedAt: latestDateString(base.sourceUpdatedAt, addition.sourceUpdatedAt),
+    sourceCadence: mergeText(base.sourceCadence, addition.sourceCadence),
+    sourceTransform: mergeText(base.sourceTransform, addition.sourceTransform),
+    seriesIds: Array.from(new Set([...(base.seriesIds ?? []), ...(addition.seriesIds ?? [])])),
+    insight: `${addition.seriesLabels?.[0] ?? addition.title} is now layered with ${base.seriesLabels?.[0] ?? base.title}; both lines start at 100 so the shapes can be compared directly.`,
     dataSource:
       base.dataSource.startsWith("live") || addition.dataSource.startsWith("live")
         ? base.dataSource.startsWith("live")
@@ -116,6 +128,23 @@ export function mergeComparison(base: ChartSpec, addition: ChartSpec): ChartSpec
           : addition.dataSource
         : "approximate"
   });
+}
+
+function indexValue(value: number, start: number) {
+  if (!Number.isFinite(value) || !Number.isFinite(start) || start === 0) return 0;
+  return Number(((value / start) * 100).toFixed(1));
+}
+
+function mergeText(left?: string, right?: string) {
+  if (!left) return right;
+  if (!right || left === right) return left;
+  return `${left} + ${right}`;
+}
+
+function latestDateString(left?: string, right?: string) {
+  if (!left) return right;
+  if (!right) return left;
+  return left > right ? left : right;
 }
 
 function uniqueKey(key: string, existing: string[]) {
