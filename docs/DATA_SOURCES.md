@@ -77,9 +77,11 @@ This means new sources should be added once to `lib/data-catalog.ts` with strong
 Current example:
 
 - Query: `how many immigrants have come to the United States in the past 20 years`
-- Catalog match: DHS/OHSS lawful permanent resident admissions.
-- Adapter: `dhs_immigration`
-- Limitation: this counts lawful permanent resident status grants, not every border crossing, visa, asylum claim, or temporary stay.
+- Ambiguity: could mean lawful permanent resident admissions, foreign-born population, border encounters, immigrant visas, asylum grants, or net migration.
+- Product behavior: ask the user which measure they want before rendering.
+- Supported chart today: DHS/OHSS lawful permanent resident admissions via adapter `dhs_immigration`.
+- Planned related sources: Census ACS foreign-born population, CBP nationwide encounters, and Department of State immigrant visa statistics.
+- Limitation: no one immigration metric represents the whole question.
 
 ## Partial Answers
 

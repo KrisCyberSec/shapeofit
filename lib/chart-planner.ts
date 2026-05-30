@@ -100,10 +100,20 @@ export function planChartQuery(rawQuery: string): ChartPlan {
   const partialComparison = partialUnsupportedComparison(rawQuery);
   if (partialComparison) return partialComparison;
 
+  const plannedMatch =
+    bestPlannedCatalogMatch(routedQuery) ?? bestPlannedCatalogMatch(rawQuery);
   const sourceMatch =
     bestSupportedCatalogMatch(routedQuery) ??
     bestSupportedCatalogMatch(rawQuery) ??
     entryMatch(resolveSupportedCatalogEntry(routedQuery));
+  if (plannedMatch && (!sourceMatch || plannedMatch.score > sourceMatch.score)) {
+    return {
+      kind: "unsupported",
+      intent: "unknown",
+      confidence: plannedMatch.confidence,
+      query: routedQuery
+    };
+  }
   if (sourceMatch) {
     return {
       kind: "source",
@@ -201,5 +211,5 @@ function normalizeForExactMatch(value: string) {
 }
 
 function entryMatch(entry: DataCatalogEntry | null) {
-  return entry ? { entry, confidence: 0.86 } : null;
+  return entry ? { entry, confidence: 0.86, score: 80, reasons: ["catalog pattern match"] } : null;
 }

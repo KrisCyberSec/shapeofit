@@ -2,8 +2,12 @@ import type { ClarificationResponse } from "@/types/chart";
 
 const AMBIGUOUS_QUERIES: Array<{
   pattern: RegExp;
-  response: ClarificationResponse;
+  response: ClarificationResponse | ((query: string) => ClarificationResponse | null);
 }> = [
+  {
+    pattern: /\b(?:immigrants?|immigration|migration)\b/i,
+    response: immigrationClarification
+  },
   {
     pattern: /^show me inflation$|^inflation$|inflation trends?$/i,
     response: {
@@ -44,5 +48,41 @@ const AMBIGUOUS_QUERIES: Array<{
 
 export function getClarification(query: string): ClarificationResponse | null {
   const trimmed = query.trim();
-  return AMBIGUOUS_QUERIES.find((item) => item.pattern.test(trimmed))?.response ?? null;
+  const match = AMBIGUOUS_QUERIES.find((item) => item.pattern.test(trimmed));
+  if (!match) return null;
+  return typeof match.response === "function" ? match.response(trimmed) : match.response;
+}
+
+function immigrationClarification(query: string): ClarificationResponse | null {
+  const lower = query.toLowerCase();
+  const isSpecific =
+    /\b(?:lawful permanent residents?|lpr|green cards?|legal immigration|permanent residents?)\b/i.test(lower) ||
+    /\b(?:border encounters?|border crossings?|border apprehensions?|cbp)\b/i.test(lower) ||
+    /\b(?:foreign[-\s]?born|immigrant population)\b/i.test(lower) ||
+    /\b(?:immigrant visas?|visa issuances?|visas? issued)\b/i.test(lower);
+
+  if (isSpecific) return null;
+
+  return {
+    needsClarification: true,
+    question: "Which immigration measure should this chart use?",
+    options: [
+      {
+        label: "Green cards / LPR admissions",
+        refinedQuery: "lawful permanent residents admitted since 2004"
+      },
+      {
+        label: "Foreign-born population",
+        refinedQuery: "foreign-born population in the United States since 2000"
+      },
+      {
+        label: "Border encounters",
+        refinedQuery: "US border encounters since 2020"
+      },
+      {
+        label: "Immigrant visas",
+        refinedQuery: "US immigrant visa issuances since 2000"
+      }
+    ]
+  };
 }

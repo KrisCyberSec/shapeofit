@@ -3,11 +3,13 @@ export type DataProviderId =
   | "worldbank"
   | "treasury"
   | "dhs"
+  | "cbp"
   | "coingecko"
   | "bls"
   | "bea"
   | "census"
   | "college_scorecard"
+  | "state_department"
   | "polygon";
 
 export type DataAdapterId =
@@ -391,8 +393,8 @@ export const DATA_CATALOG: DataCatalogEntry[] = [
       "LPR admissions"
     ],
     patterns: [
-      /\bimmigr(?:ant|ants|ation)\b.*\b(?:united states|u\.s\.|us|america)\b/i,
-      /\b(?:united states|u\.s\.|us|america)\b.*\bimmigr(?:ant|ants|ation)\b/i,
+      /\bimmigr(?:ant|ants|ation)\b.*\b(?:admissions?|admitted|legal|green cards?|lawful permanent residents?|permanent residents?)\b.*\b(?:united states|u\.s\.|us|america)\b/i,
+      /\b(?:united states|u\.s\.|us|america)\b.*\bimmigr(?:ant|ants|ation)\b.*\b(?:admissions?|admitted|legal|green cards?|lawful permanent residents?|permanent residents?)\b/i,
       /\blawful permanent residents?\b/i,
       /\bgreen cards?\b/i,
       /\bLPR\b.*\b(?:admissions?|status)\b/i
@@ -403,6 +405,87 @@ export const DATA_CATALOG: DataCatalogEntry[] = [
       "DHS Yearbook Table 1 is annual fiscal-year data; the latest mapped table runs through fiscal year 2023."
     ],
     seriesIds: ["DHS Yearbook Table 1"]
+  },
+  {
+    id: "census.foreignborn.us",
+    label: "US foreign-born population",
+    category: "population",
+    provider: "census",
+    providerLabel: "U.S. Census Bureau ACS",
+    status: "planned",
+    cadence: "annual",
+    unit: "people",
+    sourceUrl: "https://www.census.gov/topics/population/foreign-born/data/tables/acs-tables.html",
+    examples: ["foreign-born population in the United States since 2000"],
+    aliases: [
+      "foreign-born population",
+      "foreign born",
+      "immigrant population",
+      "people born outside the United States",
+      "born outside the US"
+    ],
+    patterns: [
+      /\bforeign[-\s]?born\b/i,
+      /\bimmigrant population\b/i,
+      /\bborn outside\b.*\b(?:united states|u\.s\.|us|america)\b/i
+    ],
+    limitations: [
+      "Planned source. This measures people living in the United States who were born abroad, not annual arrivals.",
+      "ACS estimates are survey-based and have margins of error."
+    ]
+  },
+  {
+    id: "cbp.encounters.us",
+    label: "US border encounters",
+    category: "population",
+    provider: "cbp",
+    providerLabel: "U.S. Customs and Border Protection",
+    status: "planned",
+    cadence: "monthly and fiscal-year tables",
+    unit: "encounters",
+    sourceUrl: "https://www.cbp.gov/newsroom/stats/nationwide-encounters",
+    examples: ["US border encounters since 2020"],
+    aliases: [
+      "border encounters",
+      "border crossings",
+      "border apprehensions",
+      "CBP encounters",
+      "inadmissibles",
+      "border patrol apprehensions"
+    ],
+    patterns: [
+      /\bborder encounters?\b/i,
+      /\bborder crossings?\b/i,
+      /\bborder apprehensions?\b/i,
+      /\bCBP\b.*\bencounters?\b/i
+    ],
+    limitations: [
+      "Planned source. Encounters are enforcement events and can include repeat encounters, not unique people.",
+      "Definitions differ across Title 8 apprehensions, OFO inadmissibles, and Title 42 expulsions."
+    ]
+  },
+  {
+    id: "state.immigrantvisas.us",
+    label: "US immigrant visa issuances",
+    category: "population",
+    provider: "state_department",
+    providerLabel: "U.S. Department of State",
+    status: "planned",
+    cadence: "monthly and annual fiscal-year reports",
+    unit: "visas",
+    sourceUrl: "https://travel.state.gov/content/travel/en/legal/visa-law0/visa-statistics/immigrant-visa-statistics.html",
+    examples: ["US immigrant visa issuances since 2000"],
+    aliases: [
+      "immigrant visas",
+      "visa issuances",
+      "immigrant visa issuances",
+      "visas issued"
+    ],
+    patterns: [/\bimmigrant visas?\b/i, /\bvisa issuances?\b/i, /\bvisas? issued\b/i],
+    limitations: [
+      "Planned source. Visa issuances are not the same as lawful permanent resident admissions or total migration.",
+      "Annual Report of the Visa Office tables require careful category and methodology handling."
+    ]
   },
   {
     id: "worldbank.population.world",

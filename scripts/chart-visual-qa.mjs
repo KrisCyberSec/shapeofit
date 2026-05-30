@@ -11,7 +11,7 @@ const LOCAL_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chro
 const CHECKS = [
   {
     name: "immigration-lpr",
-    query: "how many immigrants have come to the United States in the past 20 years",
+    query: "lawful permanent residents admitted since 2004",
     expectedTitle: "US Lawful Permanent Resident Admissions",
     expectedAxisLabels: ["Year", "People"],
     expectedSource: "LIVE - DHS"

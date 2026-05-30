@@ -83,24 +83,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!body.compareWith && plan.kind === "unsupported") {
-    let generated: Awaited<ReturnType<typeof generateSpec>>;
-    try {
-      generated = await generateSpec(plan.query);
-    } catch {
-      return NextResponse.json(unsupportedResponse(rawQuery, plan.query, plan));
-    }
-
-    const { spec, mocked } = generated;
-    const enriched = await withReferenceContext(normalizeSpec(spec), rawQuery, plan);
-
-    return NextResponse.json({
-      spec: enriched,
-      cached: false,
-      mocked,
-      latencyMs: Date.now() - startedAt,
-      chartPlan: publicPlan(plan),
-      answerability: answerabilityForPlan({ query: rawQuery, plan, spec: enriched })
-    });
+    return NextResponse.json(unsupportedResponse(rawQuery, plan.query, plan));
   }
 
   if (!body.compareWith && !isSupportedQuery(generationQuery)) {
