@@ -29,6 +29,38 @@ export interface ReferenceContext {
   confidence: "context_only";
 }
 
+export interface DataRequirement {
+  label: string;
+  status: "available" | "planned" | "missing" | "approximate";
+  providerLabel?: string;
+  sourceId?: string;
+  sourceUrl?: string;
+  unit?: string;
+  cadence?: string;
+  transform?: string;
+  note?: string;
+}
+
+export interface RenderReadiness {
+  status: "ready" | "limited";
+  chartType: ChartType;
+  xAxis: string;
+  yAxis: string;
+  dataPoints: number;
+  seriesCount: number;
+  checks: string[];
+  warnings: string[];
+}
+
+export interface AnswerabilityReport {
+  status: "chart_ready" | "needs_source" | "approximate";
+  intent: string;
+  confidence: number;
+  summary: string;
+  requirements: DataRequirement[];
+  render?: RenderReadiness;
+}
+
 export interface ChartSpec {
   title: string;
   subtitle: string;
@@ -71,6 +103,7 @@ export interface UnsupportedQueryResponse {
   query: string;
   message: string;
   supportedPrompts: string[];
+  answerability?: AnswerabilityReport;
 }
 
 export type ChartResponse = ChartSpec | ClarificationResponse | UnsupportedQueryResponse;

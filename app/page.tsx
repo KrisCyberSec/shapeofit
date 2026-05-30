@@ -3,6 +3,7 @@
 import { BookOpen, Bookmark, Check, Clipboard, Database, History, Info } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
+  AnswerabilityReport,
   ChartPointSelection,
   ChartSpec,
   ChartType,
@@ -46,7 +47,13 @@ const STARTER_PROMPTS = [
 const CHART_TYPES: ChartType[] = ["line", "bar", "area", "scatter"];
 
 type ApiChartResponse =
-  | { spec: ChartSpec; cached: boolean; mocked: boolean; latencyMs: number }
+  | {
+      spec: ChartSpec;
+      cached: boolean;
+      mocked: boolean;
+      latencyMs: number;
+      answerability?: AnswerabilityReport;
+    }
   | ClarificationResponse
   | UnsupportedQueryResponse;
 type ApiErrorResponse = { message?: string };
@@ -64,6 +71,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [clarification, setClarification] = useState<ClarificationResponse | null>(null);
   const [unsupported, setUnsupported] = useState<UnsupportedQueryResponse | null>(null);
+  const [answerability, setAnswerability] = useState<AnswerabilityReport | null>(null);
   const [currentQuery, setCurrentQuery] = useState("");
   const [selectedPoint, setSelectedPoint] = useState<ChartPointSelection | null>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -113,6 +121,7 @@ export default function Home() {
     setError(null);
     setClarification(null);
     setUnsupported(null);
+    setAnswerability(null);
     setSelectedPoint(null);
     setSourceOpen(false);
     setShareCopied(false);
@@ -133,12 +142,14 @@ export default function Home() {
 
       if ("needsClarification" in payload) {
         setSpec(null);
+        setAnswerability(null);
         setClarification(payload);
         return;
       }
 
       if ("unsupported" in payload) {
         setSpec(null);
+        setAnswerability(payload.answerability ?? null);
         setUnsupported(payload);
         return;
       }
@@ -149,6 +160,7 @@ export default function Home() {
 
       const nextSpec = { ...payload.spec, generatedFrom: cleanQuery };
       setSpec(nextSpec);
+      setAnswerability(payload.answerability ?? null);
       setChartType(nextSpec.chartType);
 
       if (options.syncUrl !== false) {
@@ -159,6 +171,7 @@ export default function Home() {
       }
     } catch (caught) {
       setSpec(null);
+      setAnswerability(null);
       setError(caught instanceof Error ? caught.message : "Something went wrong.");
     } finally {
       setLoading(false);
@@ -314,6 +327,7 @@ export default function Home() {
               <p className="mt-3 max-w-2xl text-base leading-7 text-ink2">
                 {unsupported.message}
               </p>
+              {answerability ? <AnswerabilityPanel report={answerability} /> : null}
               <div className="mt-5 grid gap-2 md:grid-cols-2">
                 {unsupported.supportedPrompts.map((prompt) => (
                   <button
@@ -379,6 +393,8 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+
+              {answerability ? <AnswerabilityPanel report={answerability} /> : null}
 
               <div className="mt-5">
                 <MultiSeriesLegend spec={spec} />
@@ -530,6 +546,104 @@ function readSavedCharts(): SavedChart[] {
   } catch {
     return [];
   }
+}
+
+function AnswerabilityPanel({ report }: { report: AnswerabilityReport }) {
+  const primaryRequirement = report.requirements[0];
+
+  return (
+    <section className="mt-5 border-y border-rule bg-bg py-4">
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr]">
+        <div className="px-1">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+            Data Check
+          </p>
+          <p className="mt-2 text-sm leading-6 text-ink2">{report.summary}</p>
+          <p className="mt-2 font-mono text-[10px] uppercase text-ink3">
+            {report.intent} / confidence {Math.round(report.confidence * 100)}%
+          </p>
+        </div>
+
+        <div className="px-1">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+            Required Data
+          </p>
+          <div className="mt-2 space-y-2">
+            {report.requirements.map((requirement) => (
+              <div key={`${requirement.label}-${requirement.status}`} className="text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="leading-5 text-ink">{requirement.label}</p>
+                  <RequirementStatus status={requirement.status} />
+                </div>
+                <p className="mt-1 text-xs leading-5 text-ink3">
+                  {requirement.providerLabel ?? requirement.note ?? "No provider mapped yet"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-1">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+            Source + Render
+          </p>
+          <div className="mt-2 space-y-2 text-sm leading-6 text-ink2">
+            <p>
+              {primaryRequirement?.sourceId ?? "No source id"}
+              {primaryRequirement?.sourceUrl ? (
+                <>
+                  {" / "}
+                  <a
+                    className="text-ink underline decoration-rule underline-offset-4 hover:text-accent"
+                    href={primaryRequirement.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open source
+                  </a>
+                </>
+              ) : null}
+            </p>
+            <p>{primaryRequirement?.cadence ?? "Cadence not mapped"}</p>
+            {primaryRequirement?.transform ? <p>{primaryRequirement.transform}</p> : null}
+            {report.render ? (
+              <p>
+                {report.render.chartType} / {report.render.xAxis} x {report.render.yAxis} /{" "}
+                {report.render.dataPoints} rows / {report.render.seriesCount} series
+              </p>
+            ) : (
+              <p>No render plan until every required source is available.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RequirementStatus({ status }: { status: AnswerabilityReport["requirements"][number]["status"] }) {
+  const label =
+    status === "available"
+      ? "Ready"
+      : status === "planned"
+        ? "Planned"
+        : status === "approximate"
+          ? "Approx."
+          : "Missing";
+
+  return (
+    <span
+      className={`shrink-0 border px-2 py-1 font-mono text-[10px] uppercase ${
+        status === "available"
+          ? "border-rule text-[#16a085]"
+          : status === "planned"
+            ? "border-rule text-[#d4ac0d]"
+            : "border-accent text-accent"
+      }`}
+    >
+      {label}
+    </span>
+  );
 }
 
 function SourceFact({ label, value }: { label: string; value?: string }) {

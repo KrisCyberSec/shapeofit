@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ChartSpec, UnsupportedQueryResponse } from "@/types/chart";
+import { answerabilityForPlan } from "@/lib/answerability";
 import { planChartQuery, type ChartPlan } from "@/lib/chart-planner";
 import { generateChartWithClaude } from "@/lib/claude";
 import { getClarification } from "@/lib/clarify";
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     const [baseQuery, additionQuery] = comparisonQueries.map(routeQueryIntent);
     const unsupportedQuery = [baseQuery, additionQuery].find((item) => !isSupportedQuery(item));
     if (unsupportedQuery) {
-      return NextResponse.json(unsupportedResponse(rawQuery, unsupportedQuery));
+      return NextResponse.json(unsupportedResponse(rawQuery, unsupportedQuery, plan));
     }
 
     let base: Awaited<ReturnType<typeof generateSpec>>;
@@ -70,7 +71,8 @@ export async function POST(req: NextRequest) {
       cached: false,
       mocked: base.mocked || addition.mocked,
       latencyMs: Date.now() - startedAt,
-      chartPlan: publicPlan(plan)
+      chartPlan: publicPlan(plan),
+      answerability: answerabilityForPlan({ query: rawQuery, plan, spec: enriched })
     });
   }
 
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
     try {
       generated = await generateSpec(plan.query);
     } catch {
-      return NextResponse.json(unsupportedResponse(rawQuery, plan.query));
+      return NextResponse.json(unsupportedResponse(rawQuery, plan.query, plan));
     }
 
     const { spec, mocked } = generated;
@@ -96,16 +98,17 @@ export async function POST(req: NextRequest) {
       cached: false,
       mocked,
       latencyMs: Date.now() - startedAt,
-      chartPlan: publicPlan(plan)
+      chartPlan: publicPlan(plan),
+      answerability: answerabilityForPlan({ query: rawQuery, plan, spec: enriched })
     });
   }
 
   if (!body.compareWith && !isSupportedQuery(generationQuery)) {
-    return NextResponse.json(unsupportedResponse(rawQuery, generationQuery));
+    return NextResponse.json(unsupportedResponse(rawQuery, generationQuery, plan));
   }
 
   if (body.compareWith && !isSupportedQuery(generationQuery)) {
-    return NextResponse.json(unsupportedResponse(rawQuery, query));
+    return NextResponse.json(unsupportedResponse(rawQuery, query, plan));
   }
 
   let generated: Awaited<ReturnType<typeof generateSpec>>;
@@ -123,7 +126,8 @@ export async function POST(req: NextRequest) {
     cached: false,
     mocked,
     latencyMs: Date.now() - startedAt,
-    chartPlan: publicPlan(plan)
+    chartPlan: publicPlan(plan),
+    answerability: answerabilityForPlan({ query: rawQuery, plan, spec: enriched })
   });
 }
 
@@ -147,13 +151,20 @@ async function generateSpec(query: string): Promise<{ spec: ChartSpec; mocked: b
   }
 }
 
-function unsupportedResponse(originalQuery: string, routedQuery: string): UnsupportedQueryResponse {
+function unsupportedResponse(
+  originalQuery: string,
+  routedQuery: string,
+  plan?: ChartPlan
+): UnsupportedQueryResponse {
   return {
     unsupported: true,
     query: originalQuery,
     message:
       "Shape Of It does not have a reliable source mapped for that question yet.",
-    supportedPrompts: nearbySupportedPrompts(routedQuery)
+    supportedPrompts: nearbySupportedPrompts(routedQuery),
+    answerability: plan
+      ? answerabilityForPlan({ query: originalQuery, plan })
+      : undefined
   };
 }
 
@@ -175,7 +186,8 @@ function partialUnsupportedResponse(
     query: originalQuery,
     message:
       `Shape Of It can tell this is a comparison, but it does not have every required source mapped yet. Missing: ${missing}.${supported}${plannedText}`,
-    supportedPrompts: nearbySupportedPrompts(originalQuery)
+    supportedPrompts: nearbySupportedPrompts(originalQuery),
+    answerability: answerabilityForPlan({ query: originalQuery, plan })
   };
 }
 

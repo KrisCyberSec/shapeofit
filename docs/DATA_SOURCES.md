@@ -42,6 +42,16 @@ Every chart response should expose:
 - `sourceTransform` when applicable.
 - `seriesIds` when the provider has stable ids.
 
+Every chart or unsupported response should also carry an answerability report:
+
+- What the product thinks the user is asking.
+- What data the question requires.
+- Whether each required source is available, planned, missing, or approximate.
+- Where each mapped source comes from.
+- Whether the chart has enough structure to render clearly: chart type, x-axis, y-axis, row count, and series count.
+
+This is the central product contract: understand the question, identify the data requirement, prove the source, and render it cleanly.
+
 ## Derived Charts
 
 Derived charts are allowed when the transform is explicit and the source requirements are cataloged. The first signature derived chart is:
