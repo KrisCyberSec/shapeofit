@@ -24,6 +24,7 @@ const STOP_WORDS = new Set([
   "can",
   "for",
   "from",
+  "growth",
   "get",
   "has",
   "have",
@@ -57,6 +58,19 @@ const STOP_WORDS = new Set([
   "where",
   "with",
   "years"
+]);
+
+const GENERIC_SIGNALS = new Set([
+  "america",
+  "american",
+  "chart",
+  "data",
+  "rate",
+  "share",
+  "trend",
+  "u s",
+  "us",
+  "value"
 ]);
 
 const SYNONYM_GROUPS = [
@@ -105,7 +119,7 @@ export function bestPlannedCatalogMatch(query: string): QuerySourceMatch | null 
 
 function confidentMatch(match?: QuerySourceMatch) {
   if (!match) return null;
-  return match.confidence >= 0.34 ? match : null;
+  return match.confidence >= 0.4 ? match : null;
 }
 
 function scoreCatalogEntry(query: string, entry: DataCatalogEntry): QuerySourceMatch {
@@ -114,22 +128,27 @@ function scoreCatalogEntry(query: string, entry: DataCatalogEntry): QuerySourceM
   const querySignals = expandSignals(normalizedQuery, queryTerms);
   const haystack = normalize(catalogText(entry));
   const haystackTerms = new Set(tokenize(haystack));
+  const distinctiveTerms = distinctiveEntryTerms(entry);
   const reasons: string[] = [];
+  let hasTopicalSignal = false;
   let score = 0;
 
   if (entry.examples.some((example) => normalize(example) === normalizedQuery)) {
     score += 100;
+    hasTopicalSignal = true;
     reasons.push("exact example match");
   }
 
   if (entry.patterns.some((pattern) => pattern.test(query))) {
     score += 80;
+    hasTopicalSignal = true;
     reasons.push("intent pattern match");
   }
 
   const aliasMatches = phraseMatches(normalizedQuery, entry.aliases);
   if (aliasMatches.length) {
     score += Math.min(aliasMatches.length, 3) * 20;
+    hasTopicalSignal = true;
     reasons.push(`alias match: ${aliasMatches.slice(0, 2).join(", ")}`);
   }
 
@@ -139,12 +158,15 @@ function scoreCatalogEntry(query: string, entry: DataCatalogEntry): QuerySourceM
   );
   if (exampleCoverage >= 0.45) {
     score += exampleCoverage * 26;
+    hasTopicalSignal = true;
     reasons.push("similar example wording");
   }
 
   const matchedSignals = Array.from(querySignals).filter(
     (signal) => haystackTerms.has(signal) || haystack.includes(signal)
   );
+  const topicalSignals = matchedSignals.filter((signal) => distinctiveTerms.has(signal));
+  if (topicalSignals.length) hasTopicalSignal = true;
   if (matchedSignals.length) {
     score += matchedSignals.length * 5;
     reasons.push(`matched terms: ${matchedSignals.slice(0, 4).join(", ")}`);
@@ -157,6 +179,7 @@ function scoreCatalogEntry(query: string, entry: DataCatalogEntry): QuerySourceM
   if (coverage >= 0.35) score += coverage * 18;
 
   if (entry.status === "supported") score += 2;
+  if (!hasTopicalSignal) score = 0;
 
   return {
     entry,
@@ -164,6 +187,26 @@ function scoreCatalogEntry(query: string, entry: DataCatalogEntry): QuerySourceM
     confidence: confidenceFromScore(score),
     reasons: Array.from(new Set(reasons))
   };
+}
+
+function distinctiveEntryTerms(entry: DataCatalogEntry) {
+  return new Set(
+    tokenize(
+      normalize(
+        [
+          entry.label,
+          entry.category,
+          entry.unit,
+          entry.transform,
+          ...entry.examples,
+          ...entry.aliases,
+          ...(entry.seriesIds ?? [])
+        ]
+          .filter(Boolean)
+          .join(" ")
+      )
+    ).filter((term) => !GENERIC_SIGNALS.has(term))
+  );
 }
 
 function catalogText(entry: DataCatalogEntry) {
