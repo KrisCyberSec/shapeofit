@@ -14,7 +14,13 @@ const COINS = [
   { id: "bitcoin", key: "bitcoin", label: "Bitcoin", aliases: ["bitcoin", "btc"] },
   { id: "ethereum", key: "ethereum", label: "Ethereum", aliases: ["ethereum", "eth"] },
   { id: "solana", key: "solana", label: "Solana", aliases: ["solana", "sol"] },
-  { id: "dogecoin", key: "dogecoin", label: "Dogecoin", aliases: ["dogecoin", "doge"] }
+  { id: "dogecoin", key: "dogecoin", label: "Dogecoin", aliases: ["dogecoin", "doge"] },
+  {
+    id: "midnight-3",
+    key: "midnight",
+    label: "Midnight",
+    aliases: ["midnight", "midnight network", "midnight token", "night", "night token"]
+  }
 ];
 
 type Coin = (typeof COINS)[number];
@@ -106,6 +112,7 @@ export async function getCryptoPriceSpec(coins: Coin[] = [COINS[0]], days = 30):
     followUpPrompts: [
       "Bitcoin price over the last year",
       "Ethereum price over the last 30 days",
+      "Midnight Network chart",
       "Solana price over the last 30 days"
     ]
   });

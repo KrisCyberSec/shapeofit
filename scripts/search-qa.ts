@@ -88,6 +88,30 @@ const checks: SearchCheck[] = [
     }
   },
   {
+    name: "Midnight Network maps to live CoinGecko crypto",
+    query: "midnight network chart",
+    assert() {
+      expectSupported(this.query, "coingecko.crypto.usd");
+      expectPlanSource(this.query, "coingecko.crypto.usd");
+    }
+  },
+  {
+    name: "NIGHT token maps to live CoinGecko crypto",
+    query: "NIGHT token price over the last 30 days",
+    assert() {
+      expectSupported(this.query, "coingecko.crypto.usd");
+      expectPlanSource(this.query, "coingecko.crypto.usd");
+    }
+  },
+  {
+    name: "NIGHT shorthand maps to live CoinGecko crypto",
+    query: "NIGHT price chart",
+    assert() {
+      expectSupported(this.query, "coingecko.crypto.usd");
+      expectPlanSource(this.query, "coingecko.crypto.usd");
+    }
+  },
+  {
     name: "US life expectancy maps to US-only World Bank source",
     query: "life expectancy in united states since 1950",
     assert() {

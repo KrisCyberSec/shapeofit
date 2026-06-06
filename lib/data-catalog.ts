@@ -350,16 +350,46 @@ export const DATA_CATALOG: DataCatalogEntry[] = [
     examples: [
       "Bitcoin vs Ethereum live over the last 30 days",
       "Bitcoin price over the last year",
+      "Midnight Network chart",
       "Solana price over the last 30 days"
     ],
-    aliases: ["crypto", "bitcoin", "btc", "ethereum", "eth", "solana", "sol", "dogecoin", "doge"],
-    patterns: [/\bcrypto\b/i, /\bbitcoin\b/i, /\bbtc\b/i, /\bethereum\b/i, /\beth\b/i, /\bsolana\b/i, /\bsol\b/i, /\bdogecoin\b/i, /\bdoge\b/i],
+    aliases: [
+      "crypto",
+      "bitcoin",
+      "btc",
+      "ethereum",
+      "eth",
+      "solana",
+      "sol",
+      "dogecoin",
+      "doge",
+      "midnight network",
+      "midnight token",
+      "night token",
+      "NIGHT",
+      "NIGHT token"
+    ],
+    patterns: [
+      /\bcrypto\b/i,
+      /\bbitcoin\b/i,
+      /\bbtc\b/i,
+      /\bethereum\b/i,
+      /\beth\b/i,
+      /\bsolana\b/i,
+      /\bsol\b/i,
+      /\bdogecoin\b/i,
+      /\bdoge\b/i,
+      /\bmidnight network\b/i,
+      /\bmidnight\b.*\b(?:token|price|chart|crypto|network)\b/i,
+      /\bnight\b.*\b(?:token|price|chart|crypto|network)\b/i,
+      /\bnight token\b/i
+    ],
     limitations: [
       "USD price history only for now.",
       "Multi-coin charts are indexed to the first shared point.",
-      "Supported coins are currently limited to Bitcoin, Ethereum, Solana, and Dogecoin."
+      "Supported coins are currently limited to Bitcoin, Ethereum, Solana, Dogecoin, and Midnight."
     ],
-    seriesIds: ["bitcoin", "ethereum", "solana", "dogecoin"]
+    seriesIds: ["bitcoin", "ethereum", "solana", "dogecoin", "midnight-3"]
   },
   {
     id: "dhs.lpr.admissions.us",
