@@ -112,6 +112,14 @@ const checks: SearchCheck[] = [
     }
   },
   {
+    name: "Midnight since inception maps to live CoinGecko crypto",
+    query: "price of midnight since inception",
+    assert() {
+      expectSupported(this.query, "coingecko.crypto.usd");
+      expectPlanSource(this.query, "coingecko.crypto.usd");
+    }
+  },
+  {
     name: "US life expectancy maps to US-only World Bank source",
     query: "life expectancy in united states since 1950",
     assert() {

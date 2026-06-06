@@ -25,6 +25,12 @@ const COINS = [
 
 type Coin = (typeof COINS)[number];
 
+type CryptoWindow = {
+  days: number;
+  label: string;
+  inception: boolean;
+};
+
 type CoinGeckoMarketChart = {
   prices?: Array<[number, number]>;
 };
@@ -59,7 +65,7 @@ export async function liveSpecForQuery(query: string): Promise<ChartSpec | null>
   }
 
   if (entry.adapter === "coingecko") {
-    return getCryptoPriceSpec(coinsForQuery(lower), daysForQuery(lower));
+    return getCryptoPriceSpec(coinsForQuery(lower), cryptoWindowForQuery(lower));
   }
 
   if (entry.adapter === "living_costs") {
@@ -73,19 +79,30 @@ export async function liveSpecForQuery(query: string): Promise<ChartSpec | null>
   return null;
 }
 
-export async function getCryptoPriceSpec(coins: Coin[] = [COINS[0]], days = 30): Promise<ChartSpec> {
+export async function getCryptoPriceSpec(
+  coins: Coin[] = [COINS[0]],
+  window: number | CryptoWindow = 30
+): Promise<ChartSpec> {
   const catalogEntry = catalogEntryForAdapter("coingecko", "crypto_prices");
-  const safeDays = Math.min(Math.max(Math.round(days), 1), 365);
+  const cryptoWindow = normalizeCryptoWindow(window);
+  const safeDays = cryptoWindow.days;
   const series = await Promise.all(coins.slice(0, 3).map((coin) => getCoinPrices(coin, safeDays)));
-  const data = buildCryptoRows(series);
+  const data = buildCryptoRows(series, cryptoWindow.inception || safeDays > 90);
   const multiSeries = series.length > 1;
   const labels = series.map((item) => item.coin.label);
+  const titleWindow = cryptoWindow.inception ? " Since Inception" : " Trend";
 
   return normalizeSpec({
-    title: multiSeries ? `${labels.join(" vs ")} Live Price Trend` : `${labels[0]} Live Price Trend`,
-    subtitle: multiSeries
-      ? `CoinGecko daily prices indexed to the first point in the last ${safeDays} days.`
-      : `CoinGecko daily USD price over the last ${safeDays} days.`,
+    title: multiSeries
+      ? `${labels.join(" vs ")} Live Price${titleWindow}`
+      : `${labels[0]} Live Price${titleWindow}`,
+    subtitle: cryptoWindow.inception
+      ? multiSeries
+        ? "CoinGecko daily prices indexed from the earliest available row returned for these assets."
+        : "CoinGecko daily USD price from the earliest available row returned for this asset."
+      : multiSeries
+        ? `CoinGecko daily prices indexed to the first point in the ${cryptoWindow.label}.`
+        : `CoinGecko daily USD price over the ${cryptoWindow.label}.`,
     chartType: "line",
     data,
     xKey: "date",
@@ -101,9 +118,14 @@ export async function getCryptoPriceSpec(coins: Coin[] = [COINS[0]], days = 30):
       multiSeries
         ? "Multiple coins are indexed to the first shared point so movement can be compared."
         : "Prices are shown in USD using CoinGecko's market chart endpoint.",
+      ...(cryptoWindow.inception
+        ? [
+            "For since-inception crypto charts, the app requests the widest public CoinGecko window it can use and starts at the earliest returned row."
+          ]
+        : []),
       "The app samples long windows to keep the chart readable.",
       "Crypto prices can move quickly between refreshes."
-    ],
+    ].slice(0, 4),
     insight: cryptoInsight(series, multiSeries),
     whyItMatters:
       "Live crypto charts prove the app can move beyond canned examples while still labeling the source and uncertainty clearly.",
@@ -187,12 +209,43 @@ function coinsForQuery(lower: string) {
   return [COINS[0], COINS[1]];
 }
 
-function daysForQuery(lower: string) {
+function cryptoWindowForQuery(lower: string): CryptoWindow {
+  if (
+    /\b(?:since|from)\s+(?:inception|launch|listing|start)\b/i.test(lower) ||
+    /\b(?:all[-\s]?time|entire history|full history)\b/i.test(lower)
+  ) {
+    return {
+      days: 365,
+      label: "earliest available CoinGecko history",
+      inception: true
+    };
+  }
+
   const explicitDays = lower.match(/(\d+)\s*days?/);
-  if (explicitDays) return Number(explicitDays[1]);
-  if (lower.includes("year") || lower.includes("12 month")) return 365;
-  if (lower.includes("week") || lower.includes("7 day")) return 7;
-  return 30;
+  if (explicitDays) return normalizeCryptoWindow(Number(explicitDays[1]));
+  if (lower.includes("year") || lower.includes("12 month")) {
+    return normalizeCryptoWindow(365);
+  }
+  if (lower.includes("week") || lower.includes("7 day")) {
+    return normalizeCryptoWindow(7);
+  }
+  return normalizeCryptoWindow(30);
+}
+
+function normalizeCryptoWindow(window: number | CryptoWindow): CryptoWindow {
+  if (typeof window !== "number") {
+    return {
+      ...window,
+      days: Math.min(Math.max(Math.round(window.days), 1), 365)
+    };
+  }
+
+  const days = Math.min(Math.max(Math.round(window), 1), 365);
+  return {
+    days,
+    label: days === 1 ? "last 1 day" : `last ${days} days`,
+    inception: false
+  };
 }
 
 async function getCoinPrices(coin: Coin, days: number) {
@@ -218,7 +271,8 @@ async function getCoinPrices(coin: Coin, days: number) {
 }
 
 function buildCryptoRows(
-  series: Array<{ coin: Coin; prices: Array<{ date: string; price: number }> }>
+  series: Array<{ coin: Coin; prices: Array<{ date: string; price: number }> }>,
+  includeYear = false
 ) {
   const shortestLength = Math.min(...series.map((item) => item.prices.length));
   const aligned = series.map((item) => ({
@@ -229,7 +283,7 @@ function buildCryptoRows(
   const indexed = aligned.length > 1;
 
   return aligned[0].prices.map((row, index) => {
-    const next: Record<string, string | number> = { date: row.date.slice(5) };
+    const next: Record<string, string | number> = { date: includeYear ? row.date : row.date.slice(5) };
     aligned.forEach((item) => {
       const price = item.prices[index]?.price ?? 0;
       next[item.coin.key] = indexed ? Number(((price / item.start) * 100).toFixed(1)) : price;
@@ -240,11 +294,10 @@ function buildCryptoRows(
 
 function sampleRows<T>(rows: T[], maxRows: number) {
   if (rows.length <= maxRows) return rows;
-  const stride = Math.ceil(rows.length / maxRows);
-  const sampled = rows.filter((_, index) => index % stride === 0);
-  const last = rows.at(-1);
-  if (last && sampled.at(-1) !== last) sampled.push(last);
-  return sampled.slice(-maxRows);
+  return Array.from({ length: maxRows }, (_, index) => {
+    const rowIndex = Math.round((index * (rows.length - 1)) / (maxRows - 1));
+    return rows[rowIndex];
+  });
 }
 
 function dedupeByDate(rows: Array<{ date: string; price: number }>) {
