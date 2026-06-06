@@ -266,6 +266,12 @@ function niceUpperBound(value: number) {
 
 function axisCompactNumber(value: number) {
   const absolute = Math.abs(value);
+  if (absolute > 0 && absolute < 1) {
+    return new Intl.NumberFormat("en", {
+      maximumFractionDigits: absolute < 0.01 ? 6 : absolute < 0.1 ? 4 : 3
+    }).format(value);
+  }
+
   const maximumFractionDigits = absolute >= 1_000_000 && absolute < 10_000_000 ? 1 : 0;
 
   return new Intl.NumberFormat("en", {

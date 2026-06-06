@@ -29,6 +29,13 @@ const CHECKS = [
     expectedTitle: "Average hourly earnings vs CPI inflation",
     expectedAxisLabels: ["Date", "Index"],
     expectedSource: "LIVE - FRED"
+  },
+  {
+    name: "midnight-network",
+    query: "midnight network chart",
+    expectedTitle: "Midnight Live Price Trend",
+    expectedAxisLabels: ["Date", "Dollars"],
+    expectedSource: "LIVE - COINGECKO"
   }
 ];
 
@@ -147,6 +154,9 @@ async function validateChart(page, check, viewportName) {
   if (!result.hasYAxis) failures.push("missing Y axis");
   if (result.xTickCount < 4) failures.push(`too few X ticks: ${result.xTickCount}`);
   if (result.yTickCount < 4) failures.push(`too few Y ticks: ${result.yTickCount}`);
+  if (new Set(result.yTicks).size < Math.min(3, result.yTicks.length)) {
+    failures.push(`Y ticks are not informative: ${result.yTicks.join(", ")}`);
+  }
   if (!result.hasAxisLabels) {
     failures.push(`missing axis labels ${check.expectedAxisLabels.join(", ")}`);
   }

@@ -59,9 +59,16 @@ export function labelize(value: string) {
 }
 
 export function compactNumber(value: number) {
+  const absolute = Math.abs(value);
+  if (absolute > 0 && absolute < 1) {
+    return new Intl.NumberFormat("en", {
+      maximumFractionDigits: absolute < 0.01 ? 6 : absolute < 0.1 ? 4 : 3
+    }).format(value);
+  }
+
   return new Intl.NumberFormat("en", {
-    notation: Math.abs(value) >= 10000 ? "compact" : "standard",
-    maximumFractionDigits: Math.abs(value) >= 100 ? 0 : 1
+    notation: absolute >= 10000 ? "compact" : "standard",
+    maximumFractionDigits: absolute >= 100 ? 0 : 1
   }).format(value);
 }
 
