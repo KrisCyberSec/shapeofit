@@ -22,21 +22,25 @@ export function answerabilityForPlan({
   plan: ChartPlan;
   spec?: ChartSpec;
 }): AnswerabilityReport {
-  const requirements = requirementsForPlan(query, plan, Boolean(spec));
+  const requirements = requirementsForPlan(query, plan, spec);
   const availableCount = requirements.filter((item) => item.status === "available").length;
   const missingCount = requirements.filter((item) => item.status === "missing").length;
   const plannedCount = requirements.filter((item) => item.status === "planned").length;
   const approximateCount = requirements.filter((item) => item.status === "approximate").length;
+  const generatedSpec = isGeneratedSpec(spec) ? spec : undefined;
   const reportStatus = spec
-    ? approximateCount
+    ? approximateCount || generatedSpec
       ? "approximate"
       : "chart_ready"
     : "needs_source";
+  const confidence = generatedSpec
+    ? Math.max(plan.confidence, generatedSpec.dataSource === "training" ? 0.55 : 0.45)
+    : plan.confidence;
 
   return {
     status: reportStatus,
-    intent: intentLabel(plan),
-    confidence: plan.confidence,
+    intent: generatedSpec ? "generated chart" : intentLabel(plan),
+    confidence,
     summary: summaryForReport({
       plan,
       spec,
@@ -50,7 +54,26 @@ export function answerabilityForPlan({
   };
 }
 
-function requirementsForPlan(query: string, plan: ChartPlan, hasSpec: boolean): DataRequirement[] {
+function requirementsForPlan(query: string, plan: ChartPlan, spec?: ChartSpec): DataRequirement[] {
+  const generatedSpec = isGeneratedSpec(spec) ? spec : undefined;
+  if (generatedSpec) {
+    return [
+      {
+        label: query,
+        status: "approximate",
+        providerLabel:
+          generatedSpec.dataSource === "training" ? "Generated from model knowledge" : "Generated estimate",
+        sourceId: "generated.fallback",
+        sourceUrl: generatedSpec.sourceUrl,
+        unit: generatedSpec.unit,
+        cadence: "Generated on request",
+        transform: "Approximate chart; verify before treating as source-backed data.",
+        note:
+          "No mapped live source was found first, so the app generated a chart and labels it as approximate."
+      }
+    ];
+  }
+
   if (plan.kind === "source") return [requirementForCatalogEntry(plan.entry, "available")];
 
   if (plan.kind === "comparison") {
@@ -88,7 +111,7 @@ function requirementsForPlan(query: string, plan: ChartPlan, hasSpec: boolean): 
   if (planned) return [requirementForCatalogEntry(planned, "planned")];
 
   const closestSupported = bestSupportedCatalogMatch(routeQueryIntent(query))?.entry;
-  if (closestSupported && hasSpec) return [requirementForCatalogEntry(closestSupported, "available")];
+  if (closestSupported && spec) return [requirementForCatalogEntry(closestSupported, "available")];
 
   return [
     {
@@ -175,7 +198,7 @@ function summaryForReport({
   approximateCount: number;
 }) {
   if (spec && approximateCount) {
-    return "This can render, but at least one part is approximate rather than source-backed.";
+    return "Generated chart: this can render, but it is approximate rather than source-backed.";
   }
   if (spec) {
     return `Ready: ${availableCount} mapped ${availableCount === 1 ? "source" : "sources"} and a ${spec.chartType} render plan.`;
@@ -185,6 +208,10 @@ function summaryForReport({
   }
   if (plan.kind === "unsupported") return "No reliable source is mapped for this question yet.";
   return "The question is understood, but the data plan is incomplete.";
+}
+
+function isGeneratedSpec(spec?: ChartSpec) {
+  return spec?.dataSource === "approximate" || spec?.dataSource === "training";
 }
 
 function intentLabel(plan: ChartPlan) {

@@ -50,7 +50,8 @@ export async function POST(req: NextRequest) {
     const [baseQuery, additionQuery] = comparisonQueries.map(routeQueryIntent);
     const unsupportedQuery = [baseQuery, additionQuery].find((item) => !isSupportedQuery(item));
     if (unsupportedQuery) {
-      return NextResponse.json(unsupportedResponse(rawQuery, unsupportedQuery, plan));
+      const fallback = await generatedFallbackResponse({ rawQuery, generationQuery: rawQuery, plan, startedAt });
+      return fallback ?? NextResponse.json(unsupportedResponse(rawQuery, unsupportedQuery, plan));
     }
 
     let base: Awaited<ReturnType<typeof generateSpec>>;
@@ -79,15 +80,18 @@ export async function POST(req: NextRequest) {
   const generationQuery = plan.kind === "derived" ? plan.canonicalQuery : query;
 
   if (!body.compareWith && plan.kind === "partial_unsupported") {
-    return NextResponse.json(partialUnsupportedResponse(rawQuery, plan));
+    const fallback = await generatedFallbackResponse({ rawQuery, generationQuery: rawQuery, plan, startedAt });
+    return fallback ?? NextResponse.json(partialUnsupportedResponse(rawQuery, plan));
   }
 
   if (!body.compareWith && plan.kind === "unsupported") {
-    return NextResponse.json(unsupportedResponse(rawQuery, plan.query, plan));
+    const fallback = await generatedFallbackResponse({ rawQuery, generationQuery: rawQuery, plan, startedAt });
+    return fallback ?? NextResponse.json(unsupportedResponse(rawQuery, plan.query, plan));
   }
 
   if (!body.compareWith && !isSupportedQuery(generationQuery)) {
-    return NextResponse.json(unsupportedResponse(rawQuery, generationQuery, plan));
+    const fallback = await generatedFallbackResponse({ rawQuery, generationQuery: rawQuery, plan, startedAt });
+    return fallback ?? NextResponse.json(unsupportedResponse(rawQuery, generationQuery, plan));
   }
 
   if (body.compareWith && !isSupportedQuery(generationQuery)) {
@@ -112,6 +116,34 @@ export async function POST(req: NextRequest) {
     chartPlan: publicPlan(plan),
     answerability: answerabilityForPlan({ query: rawQuery, plan, spec: enriched })
   });
+}
+
+async function generatedFallbackResponse({
+  rawQuery,
+  generationQuery,
+  plan,
+  startedAt
+}: {
+  rawQuery: string;
+  generationQuery: string;
+  plan: ChartPlan;
+  startedAt: number;
+}) {
+  try {
+    const generated = await generateSpec(generationQuery);
+    const spec = await withReferenceContext(normalizeSpec(generated.spec), rawQuery, plan);
+
+    return NextResponse.json({
+      spec,
+      cached: false,
+      mocked: generated.mocked,
+      latencyMs: Date.now() - startedAt,
+      chartPlan: publicPlan(plan),
+      answerability: answerabilityForPlan({ query: rawQuery, plan, spec })
+    });
+  } catch {
+    return null;
+  }
 }
 
 async function withReferenceContext(spec: ChartSpec, query: string, plan: ChartPlan) {
